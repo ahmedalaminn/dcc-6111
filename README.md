@@ -1,2 +1,2 @@
 # dcc-6111
-Junior Design Capstone for CS-3803 @ Georgia Tech
+Junior Design Capstone for CX-3803 @ Georgia Tech
