@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Waveform Report{% if source_id %} — {{ source_id }}{% endif %}</title>
+  <style>
+    body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0f1117; color: #e0e3f0; margin: 0; padding: 24px; font-size: 14px; }
+    h1 { color: #4f8ef7; font-size: 20px; margin-bottom: 4px; }
+    h2 { color: #737897; font-size: 14px; font-weight: 400; margin-bottom: 24px; }
+    h3 { color: #e0e3f0; font-size: 15px; margin: 24px 0 12px; border-bottom: 1px solid #2e3147; padding-bottom: 6px; }
+    .meta { color: #737897; font-size: 12px; margin-bottom: 24px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    th { background: #1a1d27; color: #737897; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 12px; text-align: left; border: 1px solid #2e3147; }
+    td { padding: 7px 12px; border: 1px solid #2e3147; font-family: 'Consolas', monospace; font-size: 13px; }
+    tr:nth-child(even) td { background: #1a1d27; }
+    .metric-highlight { color: #4f8ef7; }
+    .warn { color: #f7d24f; }
+    .bad { color: #f76b4f; }
+    .good { color: #4fd18a; }
+    .degradation-box { background: rgba(247,107,79,0.1); border: 1px solid rgba(247,107,79,0.3); border-radius: 4px; padding: 10px 16px; margin-bottom: 12px; color: #f76b4f; }
+    .no-degradation { color: #4fd18a; }
+    .card { background: #1a1d27; border: 1px solid #2e3147; border-radius: 6px; padding: 16px; margin-bottom: 16px; }
+    .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .summary-tile { background: #0f1117; border: 1px solid #2e3147; border-radius: 4px; padding: 12px; }
+    .summary-tile .label { font-size: 11px; color: #737897; text-transform: uppercase; }
+    .summary-tile .value { font-size: 20px; font-weight: 600; color: #4f8ef7; margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+<h1>Waveform Engineering Report</h1>
+<h2>
+  {% if source_id %}Source: {{ source_id }}{% endif %}
+  {% if comparison_id %} &nbsp;|&nbsp; Comparison: {{ comparison_id }}{% endif %}
+</h2>
+<p class="meta">Generated: {{ generated_at }}</p>
+
+{% if metrics_history %}
+<div class="card">
+  <h3>Signal Metrics History{% if source_id %} — {{ source_id }}{% endif %}</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Filename</th>
+        <th>Peak-to-Peak</th>
+        <th>RMS</th>
+        <th>Mean</th>
+        <th>SNR (dB)</th>
+        <th>Dom. Freq (Hz)</th>
+        <th>Samples</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in metrics_history %}
+      <tr>
+        <td>{{ row.filename }}</td>
+        <td class="metric-highlight">{{ "%.5f"|format(row.peak_to_peak|float) }}</td>
+        <td class="metric-highlight">{{ "%.5f"|format(row.rms|float) }}</td>
+        <td>{{ "%.5f"|format(row.mean|float) }}</td>
+        <td>{% if row.snr_db and row.snr_db != 'None' %}{{ "%.2f"|format(row.snr_db|float) }}{% else %}N/A{% endif %}</td>
+        <td>{{ "%.2f"|format(row.dominant_freq_hz|float) }}</td>
+        <td>{{ row.num_samples }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if comparison %}
+<div class="card">
+  <h3>Comparison Result</h3>
+  <p style="color:#737897;margin-bottom:16px">
+    <strong style="color:#4f8ef7">{{ comparison.label_a }}</strong>
+    &nbsp;vs&nbsp;
+    <strong style="color:#f76b4f">{{ comparison.label_b }}</strong>
+  </p>
+
+  <div class="summary-grid" style="margin-bottom:20px">
+    <div class="summary-tile">
+      <div class="label">RMSE</div>
+      <div class="value">{{ "%.6f"|format(comparison.rmse|float) }}</div>
+    </div>
+    <div class="summary-tile">
+      <div class="label">Correlation</div>
+      <div class="value">{{ "%.4f"|format(comparison.correlation|float) }}</div>
+    </div>
+    <div class="summary-tile">
+      <div class="label">Alignment Lag</div>
+      <div class="value">{{ comparison.alignment_lag_samples }} samples</div>
+    </div>
+  </div>
+
+  <h3>Degradation Indicators</h3>
+  {% if comparison.degradation_indicators %}
+    {% for ind in comparison.degradation_indicators %}
+    <div class="degradation-box">⚠ {{ ind }}</div>
+    {% endfor %}
+  {% else %}
+    <p class="no-degradation">✓ No degradation indicators detected.</p>
+  {% endif %}
+
+  <h3>Signal A Metrics</h3>
+  <table>
+    <thead>
+      <tr><th>Metric</th><th>Value</th></tr>
+    </thead>
+    <tbody>
+      {% for key, val in comparison.metrics_a.items() %}
+      <tr><td>{{ key }}</td><td class="metric-highlight">{{ val }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <h3>Signal B Metrics</h3>
+  <table>
+    <thead>
+      <tr><th>Metric</th><th>Value</th></tr>
+    </thead>
+    <tbody>
+      {% for key, val in comparison.metrics_b.items() %}
+      <tr><td>{{ key }}</td><td class="metric-highlight">{{ val }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% if not metrics_history and not comparison %}
+<div class="card" style="color:#737897;text-align:center;padding:48px">
+  No data available for this report.
+</div>
+{% endif %}
+
+</body>
+</html>

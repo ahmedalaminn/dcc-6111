@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Waveform Monitor</title>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+<div class="layout">
+
+  <!-- ===== SIDEBAR ===== -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <h1>Waveform Monitor</h1>
+      <p>Signal Analysis &amp; Comparison</p>
+    </div>
+
+    <div class="sidebar-section">Sources</div>
+    <ul class="sidebar-list" id="source-list">
+      <li style="color:var(--text-muted);font-style:italic">Loading…</li>
+    </ul>
+
+    <hr class="sidebar-divider" />
+    <div class="sidebar-section">Waveforms</div>
+    <ul class="sidebar-list" id="waveform-list">
+      <li style="color:var(--text-muted);font-style:italic">Select a source</li>
+    </ul>
+  </aside>
+
+  <!-- ===== MAIN ===== -->
+  <div class="main">
+
+    <!-- Topbar / Tabs -->
+    <div class="topbar">
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="tab-waveform">Waveform</button>
+        <button class="tab-btn" data-tab="tab-fft">FFT Spectrum</button>
+        <button class="tab-btn" data-tab="tab-metrics">Metrics Trend</button>
+        <button class="tab-btn" data-tab="tab-compare">Compare</button>
+        <button class="tab-btn" data-tab="tab-ingest">Ingest</button>
+        <button class="tab-btn" data-tab="tab-reports">Reports</button>
+      </div>
+      <div class="topbar-right">
+        <button class="btn btn-primary" id="btn-gen-report" title="Generate report for selected source">Generate Report</button>
+        <button class="btn" id="btn-refresh" title="Refresh source list">↻ Refresh</button>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- ── Waveform Tab ── -->
+      <div class="tab-panel active" id="tab-waveform">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Waveform Plot</span>
+          </div>
+          <div class="card-body">
+            <div class="chart-container" style="height:280px">
+              <canvas id="waveform-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Signal Metrics</span>
+          </div>
+          <div class="card-body">
+            <div class="metrics-grid" id="metrics-tiles">
+              <div class="empty-state" style="grid-column:1/-1">
+                <div class="icon">📊</div>
+                <div>Select a waveform to see metrics</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── FFT Tab ── -->
+      <div class="tab-panel" id="tab-fft">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">FFT Spectrum</span>
+          </div>
+          <div class="card-body">
+            <div class="chart-container" style="height:320px">
+              <canvas id="fft-chart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Metrics Trend Tab ── -->
+      <div class="tab-panel" id="tab-metrics">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Signal Metrics Over Time</span>
+          </div>
+          <div class="card-body">
+            <div class="chart-container" style="height:320px">
+              <canvas id="metrics-trend-chart"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Compare Tab ── -->
+      <div class="tab-panel" id="tab-compare">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Waveform Comparison</span>
+          </div>
+          <div class="card-body">
+            <div class="compare-selectors">
+              <div class="form-group">
+                <label>Source A</label>
+                <select id="compare-source-a"><option value="">-- Select --</option></select>
+              </div>
+              <div class="form-group">
+                <label>File A</label>
+                <select id="compare-file-a"><option value="">-- Select --</option></select>
+              </div>
+              <div class="form-group">
+                <label>Source B</label>
+                <select id="compare-source-b"><option value="">-- Select --</option></select>
+              </div>
+              <div class="form-group">
+                <label>File B</label>
+                <select id="compare-file-b"><option value="">-- Select --</option></select>
+              </div>
+              <button class="btn btn-primary" id="btn-run-compare" style="align-self:flex-end">Compare</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Summary metrics -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">Comparison Summary</span></div>
+          <div class="card-body">
+            <div class="metrics-grid">
+              <div class="metric-tile">
+                <div class="label">RMSE</div>
+                <div class="value" id="cmp-rmse">—</div>
+              </div>
+              <div class="metric-tile">
+                <div class="label">Correlation</div>
+                <div class="value" id="cmp-correlation">—</div>
+              </div>
+              <div class="metric-tile">
+                <div class="label">Alignment Lag (samples)</div>
+                <div class="value" id="cmp-lag">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Degradation indicators -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">Degradation Indicators</span></div>
+          <div class="card-body">
+            <ul class="degradation-list" id="degradation-list">
+              <li style="list-style:none;background:none;border:none;color:var(--text-muted)">Run a comparison to see indicators.</li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Waveform overlay -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">Waveform Overlay</span></div>
+          <div class="card-body">
+            <div class="chart-container" style="height:250px">
+              <canvas id="compare-waveform-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="compare-grid">
+          <!-- Difference signal -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">Difference Signal (A − B aligned)</span></div>
+            <div class="card-body">
+              <div class="chart-container" style="height:200px">
+                <canvas id="compare-diff-chart"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- FFT overlay -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">FFT Comparison</span></div>
+            <div class="card-body">
+              <div class="chart-container" style="height:200px">
+                <canvas id="compare-fft-chart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Ingest Tab ── -->
+      <div class="tab-panel" id="tab-ingest">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Ingest Binary Waveform</span></div>
+          <div class="card-body">
+            <div class="ingest-form">
+              <div class="form-group">
+                <label>Binary File (.bin)</label>
+                <input type="file" id="ingest-file" accept=".bin" />
+              </div>
+              <div class="form-group">
+                <label>Source ID override (optional)</label>
+                <input type="text" id="ingest-source-id" placeholder="e.g. sourceA" />
+              </div>
+              <button class="btn btn-primary" id="btn-ingest" style="align-self:flex-end">Ingest</button>
+            </div>
+            <p style="margin-top:12px;color:var(--text-muted);font-size:12px">
+              Accepts WAVE v1 files or raw uint8 ADC captures (BBB onboard ADC). Format is
+              auto-detected. Use <code>scripts/generate_test_waveform.py</code> to generate test files.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Reports Tab ── -->
+      <div class="tab-panel" id="tab-reports">
+        <div class="card">
+          <div class="card-header"><span class="card-title">Generated Reports</span></div>
+          <div class="card-body" id="reports-list">
+            <div class="empty-state">
+              <div class="icon">📋</div>
+              <div>No reports yet. Select a source and click "Generate Report".</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.content -->
+
+    <div id="status-bar">Ready</div>
+  </div><!-- /.main -->
+</div><!-- /.layout -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="/static/js/main.js"></script>
+</body>
+</html>
