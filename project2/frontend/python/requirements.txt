@@ -1,0 +1,15 @@
+# SLB Distributed PubSub Network Logger
+# Target: BeagleBone Black (ARM Cortex-A8, 512MB RAM, Debian-based)
+#
+# Install:
+#   pip3 install -r requirements.txt
+#
+# Frontend options:
+#   - Tkinter (gui_tk.py / main_tk.py): stdlib only, no pip deps. Recommended for BBB.
+#   - Dear PyGui (gui.py / main.py): may need build from source on ARM; use Tkinter as fallback.
+
+# Backend / Dear PyGui stack
+dearpygui>=1.11.1
+pyzmq>=26.0.0
+protobuf>=5.0.0
+flask>=3.0.0

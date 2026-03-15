@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package slb.logger;
+
+// A single diagnostic log entry published by a network node.
+message LogMessage {
+  string node_id       = 1; // Unique ID of the producing node (e.g. "node-3")
+  int64  timestamp_ms  = 2; // Unix epoch milliseconds
+  string payload       = 3; // Human-readable or serialized diagnostic data
+  string topic         = 4; // ZeroMQ topic / message category
+}
