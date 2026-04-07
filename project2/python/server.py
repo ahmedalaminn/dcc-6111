@@ -84,16 +84,11 @@ def _broadcast(event_type: str, data: dict) -> None:
 # -- Message ingestion ----------------------------------------------------------
 
 def _ingest(msg: LogMessage) -> None:
-    """
-    Called from any background thread when a new LogMessage arrives.
-    Updates node tracking and fans the message out to SSE clients.
-    """
     now = time.time()
 
     with _logging_lock:
         logging_on = _logging_enabled
 
-    # Update node last-seen; detect first appearance
     with _node_lock:
         is_new = msg.node_id not in _node_last_seen
         if len(_node_last_seen) < MAX_NODES or not is_new:
@@ -103,16 +98,14 @@ def _ingest(msg: LogMessage) -> None:
         _broadcast("node_status", {"node_id": msg.node_id, "status": "ok"})
 
     if logging_on:
-        ts = datetime.fromtimestamp(msg.timestamp_ms / 1000).strftime(
-            "%H:%M:%S.%f"
-        )[:-3]
+        ts = datetime.fromtimestamp(msg.timestamp_ms / 1000).strftime("%H:%M:%S.%f")[:-3]
         _broadcast(
             "log",
             {
-                "ts":      ts,
+                "ts": ts,
                 "node_id": msg.node_id,
                 "payload": msg.payload,
-                "topic":   msg.topic,
+                "topic": msg.topic,
             },
         )
 
@@ -219,6 +212,8 @@ def toggle():
     with _logging_lock:
         _logging_enabled = bool(data.get("enabled", True))
         state = _logging_enabled
+    # Broadcast the toggle event so the UI stays in sync
+    _broadcast("logging_toggle", {"enabled": state})
     return jsonify({"enabled": state})
 
 
