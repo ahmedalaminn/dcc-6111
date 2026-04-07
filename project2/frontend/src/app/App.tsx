@@ -15,51 +15,10 @@ interface LogMessage {
 
 export default function App() {
   const [diagnosticLoggingEnabled, setDiagnosticLoggingEnabled] = useState(true);
-  const [nodes, setNodes] = useState<Node[]>([
-    { id: 'node-a1b2c3d4', status: 'connected', isLocal: true },
-    { id: 'node-e5f6g7h8', status: 'connected', isLocal: false },
-    { id: 'node-i9j0k1l2', status: 'connected', isLocal: false },
-    { id: 'node-m3n4o5p6', status: 'disconnected', isLocal: false },
-    { id: 'node-q7r8s9t0', status: 'connected', isLocal: false },
-  ]);
-
-  const [logMessages, setLogMessages] = useState<LogMessage[]>([
-    { timestamp: '2026-02-26 14:32:01.234', producerId: 'node-e5f6g7h8', payload: '{type: "SUBSCRIBE", topic: "/sensors/temp"}' },
-    { timestamp: '2026-02-26 14:32:02.156', producerId: 'node-a1b2c3d4', payload: '{type: "PUBLISH", topic: "/sensors/temp", value: 22.5}' },
-    { timestamp: '2026-02-26 14:32:03.789', producerId: 'node-i9j0k1l2', payload: '{type: "HEARTBEAT", nodeId: "i9j0k1l2"}' },
-  ]);
+  const [nodes, setNodes] = useState<Node[]>([]);
+  const [logMessages, setLogMessages] = useState<LogMessage[]>([]);
 
   const logContainerRef = useRef<HTMLDivElement>(null);
-
-  // Simulate incoming log messages
-  useEffect(() => {
-    if (!diagnosticLoggingEnabled) return;
-
-    const interval = setInterval(() => {
-      const producers = ['node-a1b2c3d4', 'node-e5f6g7h8', 'node-i9j0k1l2', 'node-q7r8s9t0'];
-      const payloads = [
-        '{type: "PUBLISH", topic: "/sensors/humidity", value: 45.2}',
-        '{type: "SUBSCRIBE", topic: "/alerts/critical"}',
-        '{type: "HEARTBEAT", nodeId: "e5f6g7h8"}',
-        '{type: "UNSUBSCRIBE", topic: "/sensors/temp"}',
-        '{type: "PUBLISH", topic: "/devices/status", value: "online"}',
-        '{type: "ACK", messageId: "msg-12345"}',
-      ];
-
-      const now = new Date();
-      const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}.${String(now.getMilliseconds()).padStart(3, '0')}`;
-
-      const newMessage: LogMessage = {
-        timestamp,
-        producerId: producers[Math.floor(Math.random() * producers.length)],
-        payload: payloads[Math.floor(Math.random() * payloads.length)],
-      };
-
-      setLogMessages((prev) => [...prev, newMessage]);
-    }, 2000);
-
-    return () => clearInterval(interval);
-  }, [diagnosticLoggingEnabled]);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -67,6 +26,47 @@ export default function App() {
       logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
     }
   }, [logMessages]);
+
+  // Get data from back end
+  useEffect(() => {
+    const eventSource = new EventSource('http://localhost:5000/stream')
+
+    eventSource.addEventListener('node_status', (event) => {
+      const data = JSON.parse(event.data)
+      const mappedStatus = data.status === 'ok' ? 'connected' : 'disconnected'
+
+      setNodes((prevNodes) => {
+        const existingIndex = prevNodes.findIndex((n) => n.id === data.node_id)
+        if (existingIndex >= 0) {
+          const newNodes = [...prevNodes]
+          newNodes[existingIndex].status = mappedStatus
+          return newNodes
+        }
+        return [...prevNodes, { id: data.node_id, status: mappedStatus, isLocal: false }]
+      })
+    })
+
+    eventSource.addEventListener('log', (event) => {
+      const data = JSON.parse(event.data)
+      const newMessage: LogMessage = {
+        timestamp: data.ts,
+        producerId: data.node_id,
+        payload: data.payload,
+      }
+      
+      setLogMessages((prev) => [...prev, newMessage])
+
+      setNodes((prevNodes) => {
+        const existingIndex = prevNodes.findIndex((n) => n.id === data.node_id)
+        if (existingIndex < 0) {
+          return [...prevNodes, { id: data.node_id, status: 'connected', isLocal: false }]
+        }
+        return prevNodes
+      })
+    })
+
+    return () => eventSource.close()
+  }, [])
 
   return (
     <div className="size-full bg-white p-8">

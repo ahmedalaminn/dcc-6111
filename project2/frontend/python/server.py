@@ -4,7 +4,7 @@ server.py
 Flask web server for the SLB Distributed PubSub Network Logger.
 
 Replaces the DearPyGui frontend with a browser-based dashboard served over
-HTTP.  Compatible with headless BeagleBone Black (no OpenGL/display required).
+HTTP. Compatible with headless BeagleBone Black (no OpenGL/display required).
 
 Routes
 ------
@@ -30,11 +30,12 @@ import time
 from datetime import datetime
 
 from flask import Flask, Response, jsonify, render_template, request
+from flask_cors import CORS
 
 from proto.log_message_pb2 import LogMessage
 from zmq_subscriber import ZmqSubscriber
 
-# ── Constants ──────────────────────────────────────────────────────────────────
+# -- Constants ------------------------------------------------------------------
 DEFAULT_ENDPOINT      = "tcp://localhost:5555"
 DEFAULT_HOST          = "0.0.0.0"
 DEFAULT_PORT          = 5000
@@ -45,14 +46,15 @@ MAX_LOG_ROWS          = 200
 NODE_CHECK_INTERVAL_S = 1.0
 SSE_HEARTBEAT_S       = 15.0   # keep connection alive through NAT/proxies
 
-# ── Flask app ──────────────────────────────────────────────────────────────────
+# -- Flask app ------------------------------------------------------------------
 app = Flask(__name__)
+CORS(app)
 
-# ── Shared state ───────────────────────────────────────────────────────────────
+# -- Shared state ---------------------------------------------------------------
 _logging_enabled: bool = True
 _logging_lock          = threading.Lock()
 
-# node_id → last-seen epoch (float)
+# node_id -> last-seen epoch (float)
 _node_last_seen: dict  = {}
 _node_lock             = threading.Lock()
 
@@ -61,10 +63,10 @@ _clients: list         = []
 _clients_lock          = threading.Lock()
 
 
-# ── Broadcast helpers ──────────────────────────────────────────────────────────
+# -- Broadcast helpers ----------------------------------------------------------
 
 def _broadcast(event_type: str, data: dict) -> None:
-    """Push an event to every connected SSE client.  Drop silently if full."""
+    """Push an event to every connected SSE client. Drop silently if full."""
     with _clients_lock:
         dead = []
         for q in _clients:
@@ -76,7 +78,7 @@ def _broadcast(event_type: str, data: dict) -> None:
             _clients.remove(q)
 
 
-# ── Message ingestion ──────────────────────────────────────────────────────────
+# -- Message ingestion ----------------------------------------------------------
 
 def _ingest(msg: LogMessage) -> None:
     """
@@ -112,11 +114,11 @@ def _ingest(msg: LogMessage) -> None:
         )
 
 
-# ── Node watchdog thread ───────────────────────────────────────────────────────
+# -- Node watchdog thread -------------------------------------------------------
 
 def _node_watchdog(stop_evt: threading.Event) -> None:
     """Periodically detects timed-out nodes and broadcasts status updates."""
-    prev_status: dict = {}  # node_id → "ok" | "lost"
+    prev_status: dict = {}  # node_id -> "ok" | "lost"
 
     while not stop_evt.is_set():
         now = time.time()
@@ -132,10 +134,10 @@ def _node_watchdog(stop_evt: threading.Event) -> None:
         stop_evt.wait(NODE_CHECK_INTERVAL_S)
 
 
-# ── Demo producer thread ───────────────────────────────────────────────────────
+# -- Demo producer thread -------------------------------------------------------
 
 def _demo_producer(stop_evt: threading.Event) -> None:
-    """Generates synthetic LogMessage objects — no ZMQ backend required."""
+    """Generates synthetic LogMessage objects."""
     node_ids = [f"node-{i}" for i in range(1, 6)]
     payloads = [
         "heartbeat OK",
@@ -163,7 +165,7 @@ def _demo_producer(stop_evt: threading.Event) -> None:
         stop_evt.wait(random.uniform(0.3, 1.2))
 
 
-# ── Routes ─────────────────────────────────────────────────────────────────────
+# -- Routes ---------------------------------------------------------------------
 
 @app.route("/")
 def index():
@@ -173,8 +175,8 @@ def index():
 @app.route("/stream")
 def stream():
     """
-    SSE endpoint.  Each browser tab gets its own queue so slow clients
-    don't block others.  The generator cleans up on disconnect.
+    SSE endpoint. Each browser tab gets a queue so slow clients
+    do not block others. The generator cleans up on disconnect.
     """
     client_q: queue.Queue = queue.Queue(maxsize=200)
 
@@ -217,11 +219,11 @@ def toggle():
     return jsonify({"enabled": state})
 
 
-# ── Entry point ────────────────────────────────────────────────────────────────
+# -- Entry point ----------------------------------------------------------------
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="SLB PubSub Network Logger — Web Dashboard"
+        description="SLB PubSub Network Logger - Web Dashboard"
     )
     parser.add_argument(
         "--endpoint", default=DEFAULT_ENDPOINT,
@@ -247,9 +249,9 @@ def main() -> None:
 
     stop_evt = threading.Event()
 
-    # ── Start data source ──────────────────────────────────────────────────────
+    # -- Start data source ------------------------------------------------------
     if args.demo:
-        print("[server] Demo mode — synthetic data enabled.")
+        print("[server] Demo mode - synthetic data enabled.")
         src = threading.Thread(
             target=_demo_producer, args=(stop_evt,),
             name="DemoProducer", daemon=True,
@@ -278,17 +280,17 @@ def main() -> None:
             name="QueueBridge", daemon=True,
         ).start()
 
-    # ── Start node watchdog ────────────────────────────────────────────────────
+    # -- Start node watchdog ----------------------------------------------------
     threading.Thread(
         target=_node_watchdog, args=(stop_evt,),
         name="NodeWatchdog", daemon=True,
     ).start()
 
-    print(f"[server] Dashboard → http://localhost:{args.port}")
-    print(f"[server] LAN access → http://<this-device-ip>:{args.port}")
+    print(f"[server] Dashboard -> http://localhost:{args.port}")
+    print(f"[server] LAN access -> http://<this-device-ip>:{args.port}")
 
     try:
-        # threaded=True: each SSE client and each API call gets its own thread
+        # threaded=True: each SSE client and each API call gets a thread
         # use_reloader=False: reloader double-forks and breaks background threads
         app.run(
             host=args.host,
