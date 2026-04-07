@@ -4,8 +4,16 @@ import { authOptions } from "@/lib/auth";
 import { fetchOwnedReposWithForks } from "@/lib/github";
 import type { RepoWithForks } from "@/lib/github";
 
-export default async function Home() {
+type HomeProps = {
+  searchParams?: Promise<{
+    showAllRepos?: string;
+  }>;
+};
+
+export default async function Home({ searchParams }: HomeProps) {
   const session = await getServerSession(authOptions);
+  const query = (await searchParams) ?? {};
+  const showOnlyWithForks = query.showAllRepos !== "1";
   const displayUser = session?.user?.name ?? session?.githubLogin ?? session?.user?.email ?? "GitHub user";
 
   if (!session) {
@@ -57,6 +65,8 @@ export default async function Home() {
     errorMessage = error instanceof Error ? error.message : "Failed to load repositories.";
   }
 
+  const visibleRepositories = showOnlyWithForks ? repositories.filter((repository) => repository.forks.length > 0) : repositories;
+
   return (
     <div className="min-h-screen bg-zinc-100 px-6 py-10 text-zinc-900">
       <main className="mx-auto w-full max-w-5xl space-y-6">
@@ -73,6 +83,29 @@ export default async function Home() {
               Sign out
             </Link>
           </div>
+          <div className="mt-4">
+            <Link
+              href={showOnlyWithForks ? "/?showAllRepos=1" : "/"}
+              className="inline-flex rounded-md border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-800 hover:bg-zinc-100"
+            >
+              {showOnlyWithForks ? "Show only repositories with forks: ON" : "Show only repositories with forks: OFF"}
+            </Link>
+          </div>
+
+          <section className="mt-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4">
+            <h2 className="text-base font-semibold">Project Scan</h2>
+            <p className="mt-1 text-sm text-zinc-700">
+              Run project-level fork alignment, lagging analysis, framework adoption, and file comparison.
+            </p>
+            <div className="mt-3">
+              <Link
+                href="/scan"
+                className="inline-flex rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
+              >
+                Open Scan Page
+              </Link>
+            </div>
+          </section>
         </section>
 
         {errorMessage ? (
@@ -81,7 +114,7 @@ export default async function Home() {
           </section>
         ) : (
           <section className="space-y-4">
-            {repositories.map((repository) => (
+            {visibleRepositories.map((repository) => (
               <article key={repository.id} className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
                 <div className="flex flex-wrap items-center gap-3">
                   <a
@@ -101,9 +134,7 @@ export default async function Home() {
                 </div>
 
                 <div className="mt-4">
-                  {repository.forks.length === 0 ? (
-                    <p className="text-sm text-zinc-600">No forks found.</p>
-                  ) : (
+                  {repository.forks.length > 0 ? (
                     <ul className="space-y-2">
                       {repository.forks.map((fork) => (
                         <li key={fork.id} className="text-sm">
@@ -125,10 +156,15 @@ export default async function Home() {
                         </li>
                       ))}
                     </ul>
-                  )}
+                  ) : null}
                 </div>
               </article>
             ))}
+            {visibleRepositories.length === 0 ? (
+              <article className="rounded-2xl border border-zinc-200 bg-white p-6 text-sm text-zinc-700 shadow-sm">
+                No repositories matched the current fork filter.
+              </article>
+            ) : null}
           </section>
         )}
       </main>

@@ -4,6 +4,20 @@ import { authOptions } from "@/lib/auth";
 import { fetchForkComparison, fetchRepoBranches } from "@/lib/github";
 import type { BranchSummary } from "@/lib/github";
 
+function deriveStatus(behindBy: number | null) {
+  if (behindBy === null || behindBy === 0) {
+    return "Up-to-date";
+  }
+  if (behindBy > 0 && behindBy < 20) {
+    return "Slightly behind";
+  }
+  return "Lagging";
+}
+
+function displayNumber(value: number | null) {
+  return value === null ? "Not available" : value;
+}
+
 type ComparePageProps = {
   params: Promise<{
     owner: string;
@@ -130,6 +144,7 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
   }
 
   const forkRepositoryUrl = `https://github.com/${comparison.forkOwner}/${comparison.forkRepo}`;
+  const status = deriveStatus(comparison.behindBy);
 
   return (
     <div className="min-h-screen bg-zinc-100 px-6 py-10 text-zinc-900">
@@ -212,7 +227,27 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
           </form>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-3">
+        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Comparison Summary</h2>
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
+            <article className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 shadow-sm">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Ahead</p>
+              <p className="mt-2 text-lg font-semibold text-zinc-900">{displayNumber(comparison.aheadBy)}</p>
+            </article>
+            <article className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 shadow-sm">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Behind</p>
+              <p className="mt-2 text-lg font-semibold text-zinc-900">{displayNumber(comparison.behindBy)}</p>
+            </article>
+            <article className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 shadow-sm">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Status</p>
+              <p className="mt-2 text-lg font-semibold text-zinc-900">{status}</p>
+            </article>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+          <h2 className="text-lg font-semibold">Detailed Diff</h2>
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
           <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-xs uppercase tracking-wide text-zinc-500">Commit Distance</p>
             {comparison.aheadBy !== null && comparison.behindBy !== null ? (
@@ -229,13 +264,13 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
                 ) : null}
               </>
             ) : (
-              <p className="mt-2 text-sm text-zinc-600">Unavailable for this compare request.</p>
+              <p className="mt-2 text-sm text-zinc-600">Not available.</p>
             )}
           </article>
           <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-xs uppercase tracking-wide text-zinc-500">Line Changes</p>
             {comparison.diffUnavailable ? (
-              <p className="mt-2 text-sm text-zinc-600">Unavailable for this compare request.</p>
+              <p className="mt-2 text-sm text-zinc-600">Not available.</p>
             ) : (
               <>
                 <p className="mt-2 text-sm text-green-700">+{comparison.totalAdditions} added</p>
@@ -247,7 +282,7 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
           <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
             <p className="text-xs uppercase tracking-wide text-zinc-500">File Changes</p>
             {comparison.diffUnavailable ? (
-              <p className="mt-2 text-sm text-zinc-600">Unavailable for this compare request.</p>
+              <p className="mt-2 text-sm text-zinc-600">Not available.</p>
             ) : (
               <>
                 <p className="mt-2 text-sm text-zinc-700">{comparison.totalFilesChanged} changed files</p>
@@ -258,6 +293,7 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
               </>
             )}
           </article>
+          </div>
         </section>
 
         {comparison.diffUnavailable ? (
