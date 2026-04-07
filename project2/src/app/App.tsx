@@ -17,23 +17,27 @@ export default function App() {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [logMessages, setLogMessages] = useState<LogMessage[]>([]);
   
-  // Implementation for SCRUM-35: Categorized log view by node ID
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  // Array state for multiple node selections
+  const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
 
   const logContainerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll logic
   useEffect(() => {
-    if (logContainerRef.current) {
-      logContainerRef.current.scrollTop = logContainerRef.current.scrollHeight;
-    }
-  }, [logMessages]);
+      const container = logContainerRef.current;
+      if (!container) return;
 
-  // Sync state and receive SSE streams
+      const threshold = 50;
+      const isAtBottom = 
+        container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+
+      if (isAtBottom) {
+        container.scrollTop = container.scrollHeight;
+      }
+    }, [logMessages]);
+
   useEffect(() => {
     const eventSource = new EventSource('http://localhost:5000/stream');
 
-    // Listener for SCRUM-36: Sync toggle state if changed by other clients
     eventSource.addEventListener('logging_toggle', (event) => {
       const data = JSON.parse(event.data);
       setDiagnosticLoggingEnabled(data.enabled);
@@ -76,7 +80,6 @@ export default function App() {
     return () => eventSource.close();
   }, []);
 
-  // Implementation for SCRUM-36: Trigger toggle on backend
   const toggleDiagnosticLogging = async () => {
     const newState = !diagnosticLoggingEnabled;
     try {
@@ -93,9 +96,18 @@ export default function App() {
     }
   };
 
-  // Filter logs for SCRUM-35
-  const displayedLogs = selectedNodeId 
-    ? logMessages.filter(msg => msg.producerId === selectedNodeId)
+  // Toggle individual node selection
+  const toggleNodeSelection = (nodeId: string) => {
+    setSelectedNodeIds((prev) => 
+      prev.includes(nodeId)
+        ? prev.filter((id) => id !== nodeId)
+        : [...prev, nodeId]
+    );
+  };
+
+  // Filter logs against array
+  const displayedLogs = selectedNodeIds.length > 0 
+    ? logMessages.filter((msg) => selectedNodeIds.includes(msg.producerId))
     : logMessages;
 
   return (
@@ -111,7 +123,7 @@ export default function App() {
             <button
               id="diagnostic-toggle"
               onClick={toggleDiagnosticLogging}
-              className={`relative w-16 h-8 border-2 border-gray-800 transition-colors ${
+              className={`relative w-16 h-8 border-2 border-gray-800 transition-colors cursor-pointer ${
                 diagnosticLoggingEnabled ? 'bg-gray-800' : 'bg-white'
               }`}
               aria-pressed={diagnosticLoggingEnabled}
@@ -133,10 +145,10 @@ export default function App() {
             <div className="border-2 border-gray-400">
               <div className="bg-gray-200 border-b-2 border-gray-400 p-4 flex justify-between items-center">
                 <h2 className="font-mono font-semibold text-lg">SECTION 1: NETWORK OVERVIEW</h2>
-                {selectedNodeId && (
+                {selectedNodeIds.length > 0 && (
                   <button 
-                    onClick={() => setSelectedNodeId(null)}
-                    className="text-[10px] bg-gray-800 text-white px-2 py-1 font-mono uppercase"
+                    onClick={() => setSelectedNodeIds([])}
+                    className="text-[10px] bg-gray-800 cursor-pointer text-white px-2 py-1 font-mono uppercase"
                   >
                     Clear Filter
                   </button>
@@ -147,9 +159,9 @@ export default function App() {
                   {nodes.map((node) => (
                     <div
                       key={node.id}
-                      onClick={() => setSelectedNodeId(node.id)}
+                      onClick={() => toggleNodeSelection(node.id)}
                       className={`border-2 p-3 bg-white cursor-pointer transition-all ${
-                        selectedNodeId === node.id ? 'border-black ring-2 ring-gray-200' : 'border-gray-300 hover:border-gray-400'
+                        selectedNodeIds.includes(node.id) ? 'border-black ring-2 ring-gray-200' : 'border-gray-300 hover:border-gray-400'
                       }`}
                     >
                       <div className="flex items-start justify-between mb-2">
@@ -200,9 +212,9 @@ export default function App() {
             <div className="border-2 border-gray-400 h-[600px] flex flex-col relative">
               <div className="bg-gray-200 border-b-2 border-gray-400 p-4 flex justify-between items-center">
                 <h2 className="font-mono font-semibold text-lg">SECTION 2: LIVE DIAGNOSTIC LOG</h2>
-                {selectedNodeId && (
-                  <span className="font-mono text-xs bg-white border border-gray-400 px-2 py-1">
-                    FILTERING: {selectedNodeId}
+                {selectedNodeIds.length > 0 && (
+                  <span className="font-mono text-xs bg-white border border-gray-400 px-2 py-1 truncate max-w-[50%]">
+                    FILTERING: {selectedNodeIds.join(', ')}
                   </span>
                 )}
               </div>
@@ -241,7 +253,7 @@ export default function App() {
               <div className="font-mono text-xs">
                 TOTAL MESSAGES: {logMessages.length}
               </div>
-              {selectedNodeId && (
+              {selectedNodeIds.length > 0 && (
                 <div className="font-mono text-xs">
                   MATCHING FILTER: {displayedLogs.length}
                 </div>
