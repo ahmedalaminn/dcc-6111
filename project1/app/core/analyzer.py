@@ -36,9 +36,11 @@ def compute_metrics(samples, sample_rate, baseline=None):
     else:
         metrics["snr_db"] = None
 
-    # FFT — skip DC bin when looking for dominant frequency
-    n = len(samples)
-    fft_vals = np.fft.rfft(samples)
+    # FFT — skip DC bin when looking for dominant frequency.
+    # Cap input to avoid blowing RAM on the BBB; 200k samples gives ~1Hz resolution @ 200kHz SR.
+    fft_samples = samples[:200_000] if len(samples) > 200_000 else samples
+    n = len(fft_samples)
+    fft_vals = np.fft.rfft(fft_samples)
     freqs = np.fft.rfftfreq(n, d=1.0 / sample_rate)
     magnitudes = np.abs(fft_vals) * 2.0 / n
 

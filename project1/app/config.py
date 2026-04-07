@@ -12,3 +12,10 @@ RAW_DIR = os.path.join(DATA_DIR, "raw")
 METRICS_DIR = os.path.join(DATA_DIR, "metrics")
 COMPARISONS_DIR = os.path.join(DATA_DIR, "comparisons")
 REPORTS_DIR = os.path.join(DATA_DIR, "reports")
+
+# --- BBB resource limits ---
+# BeagleBone Black: ARM Cortex-A8, 512MB RAM, 1GHz single core.
+# 200k samples @ float64 = ~1.6MB — safe headroom for FFT + intermediate arrays.
+MAX_SAMPLES = int(os.environ.get("MAX_SAMPLES", 200_000))
+# Reject uploads larger than this to avoid filling eMMC / exhausting RAM during parse.
+MAX_FILE_SIZE_MB = int(os.environ.get("MAX_FILE_SIZE_MB", 100))

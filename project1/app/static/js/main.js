@@ -495,6 +495,69 @@ async function generateReport() {
 }
 
 // ---------------------------------------------------------------------------
+// Terminal
+// ---------------------------------------------------------------------------
+const termHistory = [];
+let termHistoryIdx = -1;
+
+function termAppend(html) {
+  const out = document.getElementById("term-output");
+  out.insertAdjacentHTML("beforeend", html);
+  out.scrollTop = out.scrollHeight;
+}
+
+async function termExec(command) {
+  if (!command.trim()) return;
+
+  // Add to history
+  termHistory.unshift(command);
+  termHistoryIdx = -1;
+
+  // Echo the command
+  const escaped = command.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  termAppend(`<span class="term-cmd">waveform-cli&gt; ${escaped}</span>\n`);
+
+  // Handle local "help" shortcut
+  if (command.trim() === "help") {
+    termAppend(`<span class="term-info">Available commands:
+  list-sources          List all ingested waveform sources
+  ingest &lt;file&gt;        Ingest a binary waveform file
+  analyze --input &lt;f&gt;  Print signal metrics for a waveform
+  compare --a &lt;f1&gt; --b &lt;f2&gt;  Compare two waveform files
+  report --source &lt;id&gt; Generate an HTML report
+
+Add --help to any command for detailed usage.
+</span>`);
+    return;
+  }
+
+  // Handle local "clear"
+  if (command.trim() === "clear") {
+    document.getElementById("term-output").innerHTML = "";
+    return;
+  }
+
+  setStatus("Running command...");
+  try {
+    const res = await fetch("/api/cli", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ command }),
+    });
+    const data = await res.json();
+    if (data.output) {
+      const cls = data.exit_code !== 0 ? "term-err" : "";
+      const text = data.output.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+      termAppend(cls ? `<span class="${cls}">${text}</span>` : text);
+    }
+    setStatus(data.exit_code === 0 ? "Command completed." : "Command failed.");
+  } catch (e) {
+    termAppend(`<span class="term-err">Error: ${e.message}\n</span>`);
+    setStatus("Command error.", true);
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Tab navigation
 // ---------------------------------------------------------------------------
 function switchTab(tabId) {
@@ -502,6 +565,9 @@ function switchTab(tabId) {
   document.querySelectorAll(".tab-panel").forEach(panel => panel.classList.toggle("active", panel.id === tabId));
   if (tabId === "tab-compare") populateCompareSelectors();
   if (tabId === "tab-reports") loadReports();
+  if (tabId === "tab-terminal") {
+    setTimeout(() => document.getElementById("term-input").focus(), 50);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -525,6 +591,49 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-ingest").addEventListener("click", ingestFile);
   document.getElementById("btn-refresh").addEventListener("click", loadSources);
   document.getElementById("btn-gen-report").addEventListener("click", generateReport);
+
+  // Terminal
+  const termInput = document.getElementById("term-input");
+  termInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") {
+      const cmd = termInput.value;
+      termInput.value = "";
+      termExec(cmd);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      if (termHistoryIdx < termHistory.length - 1) {
+        termHistoryIdx++;
+        termInput.value = termHistory[termHistoryIdx];
+      }
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      if (termHistoryIdx > 0) {
+        termHistoryIdx--;
+        termInput.value = termHistory[termHistoryIdx];
+      } else {
+        termHistoryIdx = -1;
+        termInput.value = "";
+      }
+    }
+  });
+
+  document.getElementById("btn-term-clear").addEventListener("click", () => {
+    document.getElementById("term-output").innerHTML = "";
+  });
+
+  // Quick action buttons
+  document.querySelectorAll(".term-action").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const cmd = btn.dataset.cmd;
+      termInput.value = cmd;
+      termInput.focus();
+      // Auto-run commands that don't need arguments
+      if (cmd === "list-sources" || cmd === "help") {
+        termInput.value = "";
+        termExec(cmd);
+      }
+    });
+  });
 
   loadSources();
 });

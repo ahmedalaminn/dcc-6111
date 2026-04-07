@@ -22,6 +22,8 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from app.config import MAX_SAMPLES
+
 MAGIC = b"WAVE"
 VERSION = 1
 
@@ -47,13 +49,13 @@ class WaveformData:
         return len(self.samples)
 
 
-def parse_binary(filepath):
+def parse_binary(filepath, max_samples=None):
     # Check magic bytes first — if it's not our format, tell the caller to use parse_raw_uint8
     with open(filepath, "rb") as f:
         magic = f.read(4)
 
     if magic == MAGIC:
-        return _parse_wave_v1(filepath)
+        return _parse_wave_v1(filepath, max_samples=max_samples)
 
     raise ValueError(
         f"'{os.path.basename(filepath)}' has no WAVE header — "
@@ -61,7 +63,9 @@ def parse_binary(filepath):
     )
 
 
-def _parse_wave_v1(filepath):
+def _parse_wave_v1(filepath, max_samples=None):
+    if max_samples is None:
+        max_samples = MAX_SAMPLES
     with open(filepath, "rb") as f:
         header_bytes = f.read(HEADER_SIZE)
         if len(header_bytes) < HEADER_SIZE:
@@ -79,8 +83,10 @@ def _parse_wave_v1(filepath):
         source_id = source_id_bytes.rstrip(b"\x00").decode("utf-8")
         units = units_bytes.rstrip(b"\x00").decode("utf-8")
 
-        sample_bytes = f.read(num_samples * 4)
-        if len(sample_bytes) < num_samples * 4:
+        # Only read up to max_samples to stay within BBB memory limits
+        read_count = min(num_samples, max_samples)
+        sample_bytes = f.read(read_count * 4)
+        if len(sample_bytes) < read_count * 4:
             raise ValueError(f"File appears truncated ({filepath})")
 
         # big-endian float32 → float64 for all internal processing
@@ -96,10 +102,14 @@ def _parse_wave_v1(filepath):
     )
 
 
-def parse_raw_uint8(filepath, sample_rate, source_id, units="ADC counts"):
+def parse_raw_uint8(filepath, sample_rate, source_id, units="ADC counts", max_samples=None):
+    if max_samples is None:
+        max_samples = MAX_SAMPLES
     # BBB ADC output is raw uint8 with a DC offset around mid-scale (~128-139).
-    # Subtract the mean to center the signal before any analysis.
-    raw = np.frombuffer(open(filepath, "rb").read(), dtype=np.uint8)
+    # Read only up to max_samples bytes to stay within BBB memory limits
+    # (each uint8 sample = 1 byte, so byte count == sample count).
+    with open(filepath, "rb") as f:
+        raw = np.frombuffer(f.read(max_samples), dtype=np.uint8)
     samples = raw.astype(np.float64)
     samples -= samples.mean()
 
@@ -128,7 +138,7 @@ def write_meta(filepath, sample_rate, source_id, units):
         }, f)
 
 
-def load_waveform(filepath):
+def load_waveform(filepath, max_samples=None):
     # If there's a sidecar, it's a raw ADC file — use that metadata to parse it.
     # Otherwise fall back to the WAVE v1 parser.
     meta_file = _meta_path(filepath)
@@ -140,8 +150,9 @@ def load_waveform(filepath):
             sample_rate=meta["sample_rate"],
             source_id=meta["source_id"],
             units=meta.get("units", "ADC counts"),
+            max_samples=max_samples,
         )
-    return _parse_wave_v1(filepath)
+    return _parse_wave_v1(filepath, max_samples=max_samples)
 
 
 def write_binary(waveform, filepath):

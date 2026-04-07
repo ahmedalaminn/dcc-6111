@@ -2,14 +2,17 @@
 # File-based storage only (no DB) to keep things lightweight for the BBB.
 
 import csv
+import io
 import json
 import os
+import shlex
 import shutil
+import sys
 import tempfile
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
-from app.config import COMPARISONS_DIR, DATA_DIR, METRICS_DIR, RAW_DIR, REPORTS_DIR, STATIC_DIR, TEMPLATES_DIR
+from app.config import COMPARISONS_DIR, DATA_DIR, MAX_FILE_SIZE_MB, METRICS_DIR, RAW_DIR, REPORTS_DIR, STATIC_DIR, TEMPLATES_DIR
 from app.core.analyzer import compute_metrics
 from app.core.comparator import compare_waveforms, save_comparison
 from app.ingest.parser import load_waveform, parse_binary, parse_raw_uint8, write_meta
@@ -44,6 +47,7 @@ def _append_metrics_csv(source_id, filename, timestamp_ms, metrics):
 
 def create_app():
     app = Flask(__name__, template_folder=TEMPLATES_DIR, static_folder=STATIC_DIR)
+    app.config["MAX_CONTENT_LENGTH"] = MAX_FILE_SIZE_MB * 1024 * 1024
 
     # Make sure the data directories are there on first run
     for d in [RAW_DIR, METRICS_DIR, COMPARISONS_DIR, REPORTS_DIR]:
@@ -244,5 +248,70 @@ def create_app():
     @app.route("/api/reports/<filename>")
     def get_report(filename):
         return send_from_directory(REPORTS_DIR, filename)
+
+    # --- CLI via web ---
+
+    @app.route("/api/cli", methods=["POST"])
+    def run_cli():
+        from app.cli.commands import build_parser, cmd_list_sources, cmd_analyze, cmd_compare, cmd_ingest, cmd_report
+
+        data = request.get_json()
+        if not data or not data.get("command"):
+            return jsonify({"error": "JSON body with 'command' string required"}), 400
+
+        raw_cmd = data["command"].strip()
+        if not raw_cmd:
+            return jsonify({"output": "", "exit_code": 0})
+
+        # Block the monitor command — it's a blocking loop, not suitable for HTTP
+        if raw_cmd.split()[0] == "monitor":
+            return jsonify({"output": "Error: 'monitor' is not available in the web terminal.\n"
+                                      "It runs a blocking watch loop — use it from a real terminal.",
+                            "exit_code": 1})
+
+        handlers = {
+            "list-sources": cmd_list_sources,
+            "analyze": cmd_analyze,
+            "compare": cmd_compare,
+            "ingest": cmd_ingest,
+            "report": cmd_report,
+        }
+
+        # Parse the command through argparse, capturing any parse errors
+        parser = build_parser()
+        try:
+            args = parser.parse_args(shlex.split(raw_cmd))
+        except SystemExit:
+            # argparse calls sys.exit on --help or bad args; capture the output
+            buf = io.StringIO()
+            try:
+                parser.parse_args(shlex.split(raw_cmd))
+            except SystemExit:
+                pass
+            # If it was --help or -h, return usage
+            if "-h" in raw_cmd or "--help" in raw_cmd:
+                help_buf = io.StringIO()
+                parser.print_help(help_buf)
+                return jsonify({"output": help_buf.getvalue(), "exit_code": 0})
+            return jsonify({"output": f"Error: invalid command. Type 'help' for usage.\n", "exit_code": 1})
+
+        handler = handlers.get(args.command)
+        if not handler:
+            return jsonify({"output": f"Error: unknown command '{args.command}'.\n", "exit_code": 1})
+
+        # Capture stdout and stderr from the handler
+        old_stdout, old_stderr = sys.stdout, sys.stderr
+        sys.stdout = out_buf = io.StringIO()
+        sys.stderr = err_buf = io.StringIO()
+        try:
+            exit_code = handler(args) or 0
+        except Exception as e:
+            exit_code = 1
+            print(f"Error: {e}", file=sys.stderr)
+        finally:
+            sys.stdout, sys.stderr = old_stdout, old_stderr
+
+        output = out_buf.getvalue() + err_buf.getvalue()
+        return jsonify({"output": output, "exit_code": exit_code})
 
     return app

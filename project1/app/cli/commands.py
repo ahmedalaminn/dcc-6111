@@ -1,7 +1,7 @@
 # CLI for the waveform monitor. Run as:
 #   python -m app.cli.commands <command> [options]
 #
-# Commands: ingest, analyze, compare, monitor, report
+# Commands: list-sources, ingest, analyze, compare, monitor, report
 
 import argparse
 import csv
@@ -12,7 +12,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from app.config import COMPARISONS_DIR, DATA_DIR, METRICS_DIR, RAW_DIR, TEMPLATES_DIR
+from app.config import COMPARISONS_DIR, DATA_DIR, MAX_FILE_SIZE_MB, METRICS_DIR, RAW_DIR, TEMPLATES_DIR
 from app.core.analyzer import compute_metrics
 from app.core.comparator import compare_waveforms, save_comparison
 from app.ingest.parser import load_waveform, parse_binary, parse_raw_uint8, write_meta
@@ -37,6 +37,52 @@ def _append_metrics_csv(source_id, filename, timestamp_ms, metrics):
         if write_header:
             writer.writeheader()
         writer.writerow(row)
+
+
+def cmd_list_sources(args):
+    if not os.path.exists(RAW_DIR):
+        print("No sources found (data/raw/ does not exist).")
+        return 0
+
+    sources = sorted(
+        d for d in os.listdir(RAW_DIR)
+        if os.path.isdir(os.path.join(RAW_DIR, d))
+    )
+
+    if not sources:
+        print("No sources found.")
+        return 0
+
+    print(f"\n{'Source':<32} {'Files':>6}  {'Total Size':>12}")
+    print("-" * 54)
+
+    total_files = 0
+    total_bytes = 0
+    for src in sources:
+        src_dir = os.path.join(RAW_DIR, src)
+        bins = [f for f in os.listdir(src_dir) if f.endswith(".bin")]
+        size = sum(os.path.getsize(os.path.join(src_dir, f)) for f in bins)
+        total_files += len(bins)
+        total_bytes += size
+
+        if size >= 1024 * 1024:
+            size_str = f"{size / (1024 * 1024):.1f} MB"
+        elif size >= 1024:
+            size_str = f"{size / 1024:.1f} KB"
+        else:
+            size_str = f"{size} B"
+
+        print(f"  {src:<30} {len(bins):>6}  {size_str:>12}")
+
+    print("-" * 54)
+    if total_bytes >= 1024 * 1024:
+        total_str = f"{total_bytes / (1024 * 1024):.1f} MB"
+    elif total_bytes >= 1024:
+        total_str = f"{total_bytes / 1024:.1f} KB"
+    else:
+        total_str = f"{total_bytes} B"
+    print(f"  {'Total':<30} {total_files:>6}  {total_str:>12}\n")
+    return 0
 
 
 def cmd_ingest(args):
@@ -153,6 +199,11 @@ def cmd_monitor(args):
                 if not fname.endswith(".bin"):
                     continue
                 fpath = os.path.join(args.dir, fname)
+                size_mb = os.path.getsize(fpath) / (1024 * 1024)
+                if size_mb > MAX_FILE_SIZE_MB:
+                    print(f"  Skipping {fname}: {size_mb:.0f} MB exceeds {MAX_FILE_SIZE_MB} MB limit",
+                          file=sys.stderr)
+                    continue
                 print(f"  New file: {fname}")
                 try:
                     wf = parse_binary(fpath)
@@ -190,6 +241,8 @@ def build_parser():
     parser = argparse.ArgumentParser(prog="waveform-cli", description="Waveform Monitor CLI")
     sub = parser.add_subparsers(dest="command", required=True)
 
+    sub.add_parser("list-sources", help="List all ingested waveform sources")
+
     p = sub.add_parser("ingest", help="Ingest a binary waveform file")
     p.add_argument("input", help="Path to .bin file")
     p.add_argument("--source-id", help="Source ID (auto-derived from filename if not set)")
@@ -220,6 +273,7 @@ def build_parser():
 def main():
     args = build_parser().parse_args()
     handlers = {
+        "list-sources": cmd_list_sources,
         "ingest": cmd_ingest,
         "analyze": cmd_analyze,
         "compare": cmd_compare,
