@@ -19,3 +19,6 @@ REPORTS_DIR = os.path.join(DATA_DIR, "reports")
 MAX_SAMPLES = int(os.environ.get("MAX_SAMPLES", 200_000))
 # Reject uploads larger than this to avoid filling eMMC / exhausting RAM during parse.
 MAX_FILE_SIZE_MB = int(os.environ.get("MAX_FILE_SIZE_MB", 100))
+
+# Default ADC sample rate for raw (headerless) BBB captures.
+DEFAULT_SAMPLE_RATE = float(os.environ.get("DEFAULT_SAMPLE_RATE", 1000.0))

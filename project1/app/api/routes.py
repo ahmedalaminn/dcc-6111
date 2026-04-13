@@ -12,7 +12,7 @@ import tempfile
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
-from app.config import COMPARISONS_DIR, DATA_DIR, MAX_FILE_SIZE_MB, METRICS_DIR, RAW_DIR, REPORTS_DIR, STATIC_DIR, TEMPLATES_DIR
+from app.config import COMPARISONS_DIR, DATA_DIR, DEFAULT_SAMPLE_RATE, MAX_FILE_SIZE_MB, METRICS_DIR, RAW_DIR, REPORTS_DIR, STATIC_DIR, TEMPLATES_DIR
 from app.core.analyzer import compute_metrics
 from app.core.comparator import compare_waveforms, save_comparison
 from app.ingest.parser import load_waveform, parse_binary, parse_raw_uint8, write_meta
@@ -127,7 +127,7 @@ def create_app():
 
         source_id_override = request.form.get("source_id")
         fmt = request.form.get("format", "auto")
-        sample_rate_str = request.form.get("sample_rate", "200000")
+        sample_rate_str = request.form.get("sample_rate", str(DEFAULT_SAMPLE_RATE))
 
         # Save upload to a temp file so we can peek at the header before committing
         with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as tmp:
@@ -140,7 +140,7 @@ def create_app():
                 try:
                     sample_rate = float(sample_rate_str)
                 except ValueError:
-                    sample_rate = 200000.0
+                    sample_rate = DEFAULT_SAMPLE_RATE
                 wf = parse_raw_uint8(tmp_path, sample_rate=sample_rate, source_id=source_id)
             else:
                 wf = parse_binary(tmp_path)

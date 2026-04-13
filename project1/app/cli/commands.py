@@ -12,7 +12,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from app.config import COMPARISONS_DIR, DATA_DIR, MAX_FILE_SIZE_MB, METRICS_DIR, RAW_DIR, TEMPLATES_DIR
+from app.config import COMPARISONS_DIR, DATA_DIR, DEFAULT_SAMPLE_RATE, MAX_FILE_SIZE_MB, METRICS_DIR, RAW_DIR, TEMPLATES_DIR
 from app.core.analyzer import compute_metrics
 from app.core.comparator import compare_waveforms, save_comparison
 from app.ingest.parser import load_waveform, parse_binary, parse_raw_uint8, write_meta
@@ -248,8 +248,8 @@ def build_parser():
     p.add_argument("--source-id", help="Source ID (auto-derived from filename if not set)")
     p.add_argument("--format", choices=["auto", "wave", "raw"], default="auto",
                    help="auto=detect by header, wave=WAVE v1, raw=uint8 ADC (default: auto)")
-    p.add_argument("--sample-rate", type=float, default=200000.0,
-                   help="Sample rate for raw files in Hz (default: 200000)")
+    p.add_argument("--sample-rate", type=float, default=DEFAULT_SAMPLE_RATE,
+                   help=f"Sample rate for raw files in Hz (default: {DEFAULT_SAMPLE_RATE:.0f})")
 
     p = sub.add_parser("analyze", help="Print signal metrics for a waveform")
     p.add_argument("--input", required=True, help="Path to .bin file")
