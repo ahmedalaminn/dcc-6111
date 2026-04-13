@@ -81,12 +81,15 @@ def create_app():
             return jsonify({"error": "File not found"}), 404
         try:
             wf = load_waveform(filepath)
-            # Downsample for the response — sending all 60M points would be insane
+            # Downsample for the response — sending all 60M points would be insane.
+            # display_step and display_sample_rate tell the client what rate the
+            # preview samples[] are actually at, so time-axis math stays correct.
             max_points = int(request.args.get("max_points", 1000))
             samples = wf.samples
+            display_step = 1
             if len(samples) > max_points:
-                step = len(samples) // max_points
-                samples = samples[::step]
+                display_step = len(samples) // max_points
+                samples = samples[::display_step]
             return jsonify({
                 "source_id": wf.source_id,
                 "filename": wf.filename,
@@ -95,6 +98,8 @@ def create_app():
                 "units": wf.units,
                 "num_samples": wf.num_samples,
                 "duration_s": wf.duration_s,
+                "display_step": display_step,
+                "display_sample_rate": wf.sample_rate / display_step,
                 "samples": samples.tolist(),
             })
         except Exception as e:

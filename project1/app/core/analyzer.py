@@ -1,6 +1,7 @@
 # Signal analysis — computes the metrics we care about for each waveform capture.
 # All functions take raw numpy arrays so they stay independent of the file format.
 
+import math
 import time
 
 import numpy as np
@@ -44,6 +45,8 @@ def compute_metrics(samples, sample_rate, baseline=None):
     freqs = np.fft.rfftfreq(n, d=1.0 / sample_rate)
     magnitudes = np.abs(fft_vals) * 2.0 / n
 
+    # dominant_freq_hz is computed from the full FFT before any display decimation,
+    # so it is unaffected by the downsampling done below.
     if len(magnitudes) > 1:
         dominant_idx = int(np.argmax(magnitudes[1:])) + 1
         metrics["dominant_freq_hz"] = float(freqs[dominant_idx])
@@ -52,9 +55,11 @@ def compute_metrics(samples, sample_rate, baseline=None):
         metrics["dominant_freq_hz"] = 0.0
         metrics["dominant_freq_magnitude"] = 0.0
 
-    # Downsample FFT arrays so they don't blow up response payloads
+    # Downsample FFT arrays so they don't blow up response payloads.
+    # Use ceil so the output never exceeds MAX_FFT_POINTS (floor can overshoot by
+    # almost 2×: e.g. 2001 bins // 512 = step 3 → 667 returned points).
     if len(freqs) > MAX_FFT_POINTS:
-        step = len(freqs) // MAX_FFT_POINTS
+        step = math.ceil(len(freqs) / MAX_FFT_POINTS)
         metrics["fft_freqs"] = freqs[::step].tolist()
         metrics["fft_magnitudes"] = magnitudes[::step].tolist()
     else:

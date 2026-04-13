@@ -1,0 +1,43 @@
+{
+  "id": "cmp_1773692588411",
+  "timestamp_ms": 1773692588411,
+  "label_a": "DataOutput1/DataOutput1.bin",
+  "label_b": "DataOutput1/DataOutput1.bin",
+  "source_a": "DataOutput1",
+  "source_b": "DataOutput1",
+  "filename_a": "DataOutput1.bin",
+  "filename_b": "DataOutput1.bin",
+  "rmse": 0.0,
+  "correlation": 0.9999999999999998,
+  "alignment_lag_samples": 0,
+  "metrics_a": {
+    "peak_to_peak": 39.0,
+    "max": 19.86114811878005,
+    "min": -19.13885188121995,
+    "rms": 8.625907010870751,
+    "mean": -0.007891881219949291,
+    "std": 8.62590340071114,
+    "num_samples": 50000,
+    "snr_db": -17.713216566818918,
+    "dominant_freq_hz": 40984.0,
+    "dominant_freq_magnitude": 3.601042539089248,
+    "computed_at_ms": 1773692588408
+  },
+  "metrics_b": {
+    "peak_to_peak": 39.0,
+    "max": 19.86114811878005,
+    "min": -19.13885188121995,
+    "rms": 8.625907010870751,
+    "mean": -0.007891881219949291,
+    "std": 8.62590340071114,
+    "num_samples": 50000,
+    "snr_db": -17.713216566818918,
+    "dominant_freq_hz": 40984.0,
+    "dominant_freq_magnitude": 3.601042539089248,
+    "rmse_vs_baseline": 0.0,
+    "correlation_vs_baseline": 0.9999999999999998,
+    "alignment_lag_samples": 0,
+    "computed_at_ms": 1773692588411
+  },
+  "degradation_indicators": []
+}
