@@ -144,7 +144,7 @@ async function loadWaveform(sourceId, filename) {
     const data = await apiFetch(`/api/sources/${sourceId}/waveforms/${filename}?max_points=1000`);
     state.currentWaveformData = data;
     renderWaveformChart(data);
-    renderFftChart(sourceId, filename);
+    renderFftChart();
     renderMetricTiles(data);
     setStatus(`${filename} — ${data.num_samples} samples @ ${data.sample_rate} Hz`);
   } catch (e) {
@@ -177,7 +177,7 @@ function renderWaveformChart(data) {
   });
 }
 
-function renderFftChart(sourceId, filename) {
+function renderFftChart() {
   // Use the already-loaded downsampled waveform data — no extra request needed
   if (!state.currentWaveformData) return;
   const samples = state.currentWaveformData.samples;
@@ -263,26 +263,65 @@ async function loadMetricsHistory(sourceId) {
 
 function renderMetricsHistory() {
   const rows = state.metricsHistory;
-  if (rows.length === 0) return;
+  const ctx = document.getElementById("metrics-trend-chart").getContext("2d");
+  if (metricsChart) metricsChart.destroy();
+
+  if (rows.length === 0) {
+    // Draw placeholder so the canvas isn't blank
+    metricsChart = new Chart(ctx, {
+      type: "line",
+      data: { labels: [], datasets: [] },
+      options: {
+        ...CHART_DEFAULTS,
+        plugins: {
+          ...CHART_DEFAULTS.plugins,
+          title: { display: true, text: "Select a source to view metrics trend", color: "#737897" },
+        },
+      },
+    });
+    return;
+  }
 
   const labels = rows.map(r => r.filename);
-  const ctx = document.getElementById("metrics-trend-chart").getContext("2d");
 
-  if (metricsChart) metricsChart.destroy();
   metricsChart = new Chart(ctx, {
-    type: "line",
+    type: "bar",
     data: {
       labels,
       datasets: [
-        makeLineDataset("Peak-to-Peak", rows.map(r => parseFloat(r.peak_to_peak)), "#4f8ef7"),
-        makeLineDataset("RMS", rows.map(r => parseFloat(r.rms)), "#4fd18a"),
+        {
+          label: "Peak-to-Peak",
+          data: rows.map(r => parseFloat(r.peak_to_peak)),
+          backgroundColor: "rgba(79,142,247,0.7)",
+          borderColor: "#4f8ef7",
+          borderWidth: 1,
+          yAxisID: "y",
+        },
+        {
+          label: "RMS",
+          data: rows.map(r => parseFloat(r.rms)),
+          backgroundColor: "rgba(79,209,138,0.7)",
+          borderColor: "#4fd18a",
+          borderWidth: 1,
+          yAxisID: "y",
+        },
+        {
+          label: "Dominant Freq (Hz)",
+          data: rows.map(r => parseFloat(r.dominant_freq_hz)),
+          backgroundColor: "rgba(247,210,79,0.7)",
+          borderColor: "#f7d24f",
+          borderWidth: 1,
+          yAxisID: "yFreq",
+        },
       ],
     },
     options: {
       ...CHART_DEFAULTS,
       scales: {
-        x: { ...CHART_DEFAULTS.scales.x, title: { display: true, text: "Capture", color: "#737897" } },
-        y: { ...CHART_DEFAULTS.scales.y, title: { display: true, text: "Value", color: "#737897" } },
+        x:     { ...CHART_DEFAULTS.scales.x, title: { display: true, text: "Capture", color: "#737897" } },
+        y:     { ...CHART_DEFAULTS.scales.y, position: "left",  title: { display: true, text: "Amplitude", color: "#737897" }, beginAtZero: true },
+        yFreq: { ...CHART_DEFAULTS.scales.y, position: "right", title: { display: true, text: "Frequency (Hz)", color: "#f7d24f" },
+                 grid: { drawOnChartArea: false }, beginAtZero: true },
       },
     },
   });
@@ -565,6 +604,13 @@ function switchTab(tabId) {
   document.querySelectorAll(".tab-panel").forEach(panel => panel.classList.toggle("active", panel.id === tabId));
   if (tabId === "tab-compare") populateCompareSelectors();
   if (tabId === "tab-reports") loadReports();
+  if (tabId === "tab-metrics") {
+    if (state.selectedSource && state.metricsHistory.length === 0) {
+      loadMetricsHistory(state.selectedSource);
+    } else {
+      renderMetricsHistory();
+    }
+  }
   if (tabId === "tab-terminal") {
     setTimeout(() => document.getElementById("term-input").focus(), 50);
   }
