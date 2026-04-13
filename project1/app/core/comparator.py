@@ -18,28 +18,33 @@ def _downsample(arr, max_points=MAX_PLOT_POINTS):
     return arr.tolist()
 
 
-def compare_waveforms(waveform_a, waveform_b, label_a=None, label_b=None):
+def compare_waveforms(waveform_a, waveform_b, label_a=None, label_b=None,
+                      display_a=None, display_b=None):
     label_a = label_a or f"{waveform_a.source_id}/{waveform_a.filename}"
     label_b = label_b or f"{waveform_b.source_id}/{waveform_b.filename}"
 
+    # Metrics and cross-correlation use the (possibly capped) samples
     rmse, correlation, lag = compare_signals(waveform_a.samples, waveform_b.samples)
 
     metrics_a = compute_metrics(waveform_a.samples, waveform_a.sample_rate)
-    # Pass A as the baseline for B so we get relative error metrics
     metrics_b = compute_metrics(waveform_b.samples, waveform_b.sample_rate, baseline=waveform_a.samples)
 
-    # Build the difference signal using the lag-aligned arrays
+    # Build the aligned difference signal (used for metrics/diff chart only)
     min_len = min(len(waveform_a.samples), len(waveform_b.samples))
-    a = waveform_a.samples[:min_len]
-    b = waveform_b.samples[:min_len]
+    a_aligned = waveform_a.samples[:min_len]
+    b_aligned = waveform_b.samples[:min_len]
     if lag > 0 and lag < min_len:
-        a = a[lag:]
-        b = b[:len(a)]
+        a_aligned = a_aligned[lag:]
+        b_aligned = b_aligned[:len(a_aligned)]
     elif lag < 0 and -lag < min_len:
-        b = b[-lag:]
-        a = a[:len(b)]
-    diff_len = min(len(a), len(b))
-    difference = a[:diff_len] - b[:diff_len]
+        b_aligned = b_aligned[-lag:]
+        a_aligned = a_aligned[:len(b_aligned)]
+    diff_len = min(len(a_aligned), len(b_aligned))
+    difference = a_aligned[:diff_len] - b_aligned[:diff_len]
+
+    # Use full samples for display if provided, otherwise fall back to the capped samples
+    plot_a = display_a if display_a is not None else waveform_a.samples
+    plot_b = display_b if display_b is not None else waveform_b.samples
 
     # Strip list-type entries (FFT arrays) from stored metrics — keep scalars only
     scalar_a = {k: v for k, v in metrics_a.items() if not isinstance(v, list)}
@@ -60,9 +65,9 @@ def compare_waveforms(waveform_a, waveform_b, label_a=None, label_b=None):
         "metrics_a": scalar_a,
         "metrics_b": scalar_b,
         "degradation_indicators": detect_degradation(metrics_a, metrics_b),
-        # Downsampled arrays for the frontend charts
-        "waveform_a": _downsample(waveform_a.samples),
-        "waveform_b": _downsample(waveform_b.samples),
+        # Full-length downsampled arrays for display — onset alignment handled by frontend
+        "waveform_a": _downsample(plot_a),
+        "waveform_b": _downsample(plot_b),
         "difference": _downsample(difference),
         "fft_a": {"freqs": metrics_a.get("fft_freqs", []), "magnitudes": metrics_a.get("fft_magnitudes", [])},
         "fft_b": {"freqs": metrics_b.get("fft_freqs", []), "magnitudes": metrics_b.get("fft_magnitudes", [])},

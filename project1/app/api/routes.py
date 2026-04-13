@@ -203,12 +203,17 @@ def create_app():
         try:
             wf_a = load_waveform(path_a)
             wf_b = load_waveform(path_b)
+
+            # Keep full samples for display, cap separately for cross-correlation
+            # (full cross-corr on 200k samples is too slow on the BBB)
+            display_a = wf_a.samples
+            display_b = wf_b.samples
             if len(wf_a.samples) > max_samples:
                 wf_a.samples = wf_a.samples[:max_samples]
             if len(wf_b.samples) > max_samples:
                 wf_b.samples = wf_b.samples[:max_samples]
 
-            result = compare_waveforms(wf_a, wf_b)
+            result = compare_waveforms(wf_a, wf_b, display_a=display_a, display_b=display_b)
             save_comparison(result, COMPARISONS_DIR)
             return jsonify(result)
         except Exception as e:

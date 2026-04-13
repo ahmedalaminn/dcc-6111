@@ -386,6 +386,20 @@ async function runComparison() {
   }
 }
 
+function findOnset(samples) {
+  // Find the first index where the signal becomes meaningfully active.
+  // Uses a rolling window of 10 points, threshold at 30% of peak absolute value.
+  const peak = Math.max(...samples.map(s => Math.abs(s)));
+  if (peak === 0) return 0;
+  const threshold = peak * 0.3;
+  const window = 10;
+  for (let i = 0; i < samples.length - window; i++) {
+    const rms = Math.sqrt(samples.slice(i, i + window).reduce((s, v) => s + v * v, 0) / window);
+    if (rms > threshold) return Math.max(0, i);
+  }
+  return 0;
+}
+
 function renderComparisonResult(result) {
   // Summary metrics
   document.getElementById("cmp-rmse").textContent = result.rmse.toFixed(6);
@@ -400,17 +414,37 @@ function renderComparisonResult(result) {
     degList.innerHTML = '<li class="no-degradation" style="list-style:none;background:none;border:none;color:var(--green)">✓ No degradation indicators detected.</li>';
   }
 
-  // Waveform overlay chart
+  // Waveform overlay chart — shift one dataset with leading nulls so both
+  // active portions start at the same x position, then slice both to the
+  // shared onset so the blank leading region doesn't compress the active view.
+  const onsetA = findOnset(result.waveform_a);
+  const onsetB = findOnset(result.waveform_b);
+  const shift = onsetB - onsetA;
+  let dataA = result.waveform_a;
+  let dataB = result.waveform_b;
+  if (shift > 0) {
+    dataA = Array(shift).fill(null).concat(result.waveform_a);
+  } else if (shift < 0) {
+    dataB = Array(-shift).fill(null).concat(result.waveform_b);
+  }
+  // Trim both to start just before the shared onset so the chart isn't
+  // dominated by blank/null leading space.
+  const sharedOnset = Math.max(onsetA, onsetB);
+  const trimStart = Math.max(0, sharedOnset - 10);
+  dataA = dataA.slice(trimStart);
+  dataB = dataB.slice(trimStart);
+  const totalLen = Math.max(dataA.length, dataB.length);
+
   const ctxW = document.getElementById("compare-waveform-chart").getContext("2d");
   if (compareWaveformChart) compareWaveformChart.destroy();
-  const labels = Array.from({ length: result.waveform_a.length }, (_, i) => i);
+  const labels = Array.from({ length: totalLen }, (_, i) => i);
   compareWaveformChart = new Chart(ctxW, {
     type: "line",
     data: {
       labels,
       datasets: [
-        makeLineDataset(result.label_a, result.waveform_a, "#4f8ef7"),
-        makeLineDataset(result.label_b, result.waveform_b, "#f76b4f"),
+        makeLineDataset(result.label_a, dataA, "#4f8ef7"),
+        makeLineDataset(result.label_b, dataB, "#f76b4f"),
       ],
     },
     options: {

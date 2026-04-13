@@ -1,0 +1,48 @@
+{
+  "id": "cmp_1776116110168",
+  "timestamp_ms": 1776116110168,
+  "label_a": "DataOutput22/DataOutput22.bin",
+  "label_b": "DataOutput42/DataOutput42.bin",
+  "source_a": "DataOutput22",
+  "source_b": "DataOutput42",
+  "filename_a": "DataOutput22.bin",
+  "filename_b": "DataOutput42.bin",
+  "rmse": 10.114709631281897,
+  "correlation": -0.02985219640230052,
+  "alignment_lag_samples": -26190,
+  "metrics_a": {
+    "peak_to_peak": 10.0,
+    "max": 3.908469999999994,
+    "min": -6.091530000000006,
+    "rms": 0.8991898247311298,
+    "mean": -0.0015300000000058845,
+    "std": 0.8991885230584297,
+    "num_samples": 50000,
+    "snr_db": -4.269080429742812,
+    "dominant_freq_hz": 483.76,
+    "dominant_freq_magnitude": 0.48271923449308995,
+    "computed_at_ms": 1776116110165
+  },
+  "metrics_b": {
+    "peak_to_peak": 44.0,
+    "max": 20.884974999999997,
+    "min": -23.115025000000003,
+    "rms": 6.937627589502409,
+    "mean": 0.00857499999999718,
+    "std": 6.937622290093342,
+    "num_samples": 50000,
+    "snr_db": -16.768239618998773,
+    "dominant_freq_hz": 204.84,
+    "dominant_freq_magnitude": 1.5103493807528876,
+    "rmse_vs_baseline": 10.114709631281897,
+    "correlation_vs_baseline": -0.029852196402300524,
+    "alignment_lag_samples": 26190,
+    "computed_at_ms": 1776116110168
+  },
+  "degradation_indicators": [
+    "Peak-to-peak amplitude changed by 340.0%",
+    "SNR dropped by 12.5 dB",
+    "Dominant frequency shifted from 483.8 Hz to 204.8 Hz",
+    "RMSE vs baseline is 10.1147 (1124.9% of reference RMS)"
+  ]
+}
