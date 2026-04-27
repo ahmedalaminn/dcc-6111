@@ -1,0 +1,41 @@
+{
+  "id": "cmp_1777265716309",
+  "timestamp_ms": 1777265716309,
+  "labels": [
+    "sourceA/capture_001.bin",
+    "sourceB/capture_002.bin",
+    "sourceA/capture_003.bin"
+  ],
+  "pairs": [
+    {
+      "i": 0,
+      "j": 1,
+      "label_i": "sourceA/capture_001.bin",
+      "label_j": "sourceB/capture_002.bin",
+      "rmse": 93.85859081473008,
+      "correlation": 0.08211742909958047,
+      "alignment_lag_samples": 44,
+      "degradation_indicators": []
+    },
+    {
+      "i": 0,
+      "j": 2,
+      "label_i": "sourceA/capture_001.bin",
+      "label_j": "sourceA/capture_003.bin",
+      "rmse": 84.96597055860747,
+      "correlation": 0.28431791933415335,
+      "alignment_lag_samples": 0,
+      "degradation_indicators": []
+    },
+    {
+      "i": 1,
+      "j": 2,
+      "label_i": "sourceB/capture_002.bin",
+      "label_j": "sourceA/capture_003.bin",
+      "rmse": 95.75814987403524,
+      "correlation": 0.08968807351739527,
+      "alignment_lag_samples": -20,
+      "degradation_indicators": []
+    }
+  ]
+}

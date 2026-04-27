@@ -14,7 +14,7 @@ from flask import Flask, jsonify, render_template, request, send_from_directory
 
 from app.config import COMPARISONS_DIR, DATA_DIR, DEFAULT_SAMPLE_RATE, MAX_COMPARE_SAMPLES, MAX_FILE_SIZE_MB, METRICS_DIR, RAW_DIR, REPORTS_DIR, STATIC_DIR, TEMPLATES_DIR
 from app.core.analyzer import compute_metrics
-from app.core.comparator import compare_waveforms, save_comparison
+from app.core.comparator import compare_waveforms, compare_waveforms_multi, save_comparison
 from app.ingest.parser import load_waveform, parse_binary, parse_raw_uint8, write_meta
 from app.reports.generator import generate_report
 
@@ -239,6 +239,46 @@ def create_app():
                 wf_b.samples = wf_b.samples[:max_samples]
 
             result = compare_waveforms(wf_a, wf_b, display_a=display_a, display_b=display_b)
+            save_comparison(result, COMPARISONS_DIR)
+            return jsonify(result)
+        except Exception as e:
+            return jsonify({"error": str(e)}), 400
+
+    @app.route("/api/compare/multi", methods=["POST"])
+    def compare_multi():
+        data = request.get_json()
+        if not data:
+            return jsonify({"error": "JSON body required"}), 400
+
+        specs = data.get("waveforms")
+        if not isinstance(specs, list) or not (2 <= len(specs) <= 5):
+            return jsonify({"error": "Required: waveforms array with 2–5 items"}), 400
+
+        max_samples = int(data.get("max_samples", MAX_COMPARE_SAMPLES))
+
+        waveforms = []
+        display_samples = []
+        for spec in specs:
+            source_id = spec.get("source_id")
+            filename = spec.get("filename")
+            if not source_id or not filename:
+                return jsonify({"error": "Each waveform entry needs source_id and filename"}), 400
+            path = os.path.join(RAW_DIR, source_id, filename)
+            if not os.path.exists(path):
+                return jsonify({"error": f"File not found: {path}"}), 404
+            try:
+                wf = load_waveform(path)
+                wf.source_id = source_id   # use directory name, not embedded header value
+                wf.filename = filename
+                display_samples.append(wf.samples)
+                if len(wf.samples) > max_samples:
+                    wf.samples = wf.samples[:max_samples]
+                waveforms.append(wf)
+            except Exception as e:
+                return jsonify({"error": str(e)}), 400
+
+        try:
+            result = compare_waveforms_multi(waveforms, display_samples=display_samples)
             save_comparison(result, COMPARISONS_DIR)
             return jsonify(result)
         except Exception as e:

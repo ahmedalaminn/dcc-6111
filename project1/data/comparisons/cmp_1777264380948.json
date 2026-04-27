@@ -1,0 +1,45 @@
+{
+  "id": "cmp_1777264380948",
+  "timestamp_ms": 1777264380948,
+  "label_a": "sourceA/capture_001.bin",
+  "label_b": "sourceB/capture_002.bin",
+  "source_a": "sourceA",
+  "source_b": "sourceB",
+  "filename_a": "capture_001.bin",
+  "filename_b": "capture_002.bin",
+  "rmse": 93.85859081473008,
+  "correlation": 0.08211742909958047,
+  "alignment_lag_samples": 44,
+  "metrics_a": {
+    "peak_to_peak": 255.0,
+    "max": 135.5013516834603,
+    "min": -119.49864831653969,
+    "rms": 69.5461699687879,
+    "mean": 9.164237594664552e-15,
+    "std": 69.5461699687879,
+    "num_samples": 4069,
+    "snr_db": -5.070459537790067,
+    "dominant_freq_hz": 247.4809535512411,
+    "dominant_freq_magnitude": 19.956512388415625,
+    "computed_at_ms": 1777264380945
+  },
+  "metrics_b": {
+    "peak_to_peak": 255.0,
+    "max": 134.20723131495424,
+    "min": -120.79276868504574,
+    "rms": 69.14199855109324,
+    "mean": -8.40500113344202e-15,
+    "std": 69.14199855109325,
+    "num_samples": 16069,
+    "snr_db": -5.623540805570423,
+    "dominant_freq_hz": 246.8728607878524,
+    "dominant_freq_magnitude": 20.884311368808813,
+    "rmse_vs_baseline": 93.85859081473008,
+    "correlation_vs_baseline": 0.08211742909958049,
+    "alignment_lag_samples": -44,
+    "computed_at_ms": 1777264380948
+  },
+  "degradation_indicators": [
+    "RMSE vs baseline is 93.8586 (135.0% of reference RMS)"
+  ]
+}

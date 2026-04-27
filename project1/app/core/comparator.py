@@ -76,13 +76,82 @@ def compare_waveforms(waveform_a, waveform_b, label_a=None, label_b=None,
     return result
 
 
+def compare_waveforms_multi(waveforms, display_samples=None):
+    """Compare N waveforms (2–5), computing metrics for every pair."""
+    n = len(waveforms)
+    if n < 2 or n > 5:
+        raise ValueError("Need 2–5 waveforms to compare")
+
+    labels = [f"{wf.source_id}/{wf.filename}" for wf in waveforms]
+
+    if display_samples is None:
+        display_samples = [wf.samples for wf in waveforms]
+    waveform_arrays = [_downsample(ds) for ds in display_samples]
+
+    fft_data = []
+    metrics_list = []
+    for wf in waveforms:
+        m = compute_metrics(wf.samples, wf.sample_rate)
+        fft_data.append({
+            "freqs": m.get("fft_freqs", []),
+            "magnitudes": m.get("fft_magnitudes", []),
+        })
+        metrics_list.append(m)
+
+    pairs = []
+    for i in range(n):
+        for j in range(i + 1, n):
+            rmse, correlation, lag = compare_signals(waveforms[i].samples, waveforms[j].samples)
+
+            min_len = min(len(waveforms[i].samples), len(waveforms[j].samples))
+            a_aligned = waveforms[i].samples[:min_len]
+            b_aligned = waveforms[j].samples[:min_len]
+            if lag > 0 and lag < min_len:
+                a_aligned = a_aligned[lag:]
+                b_aligned = b_aligned[:len(a_aligned)]
+            elif lag < 0 and -lag < min_len:
+                b_aligned = b_aligned[-lag:]
+                a_aligned = a_aligned[:len(b_aligned)]
+            diff_len = min(len(a_aligned), len(b_aligned))
+            difference = a_aligned[:diff_len] - b_aligned[:diff_len]
+
+            pairs.append({
+                "i": i,
+                "j": j,
+                "label_i": labels[i],
+                "label_j": labels[j],
+                "rmse": rmse,
+                "correlation": correlation,
+                "alignment_lag_samples": lag,
+                "difference": _downsample(difference),
+                "degradation_indicators": detect_degradation(metrics_list[i], metrics_list[j]),
+            })
+
+    return {
+        "id": f"cmp_{int(time.time() * 1000)}",
+        "timestamp_ms": int(time.time() * 1000),
+        "labels": labels,
+        "waveform_arrays": waveform_arrays,
+        "fft_data": fft_data,
+        "pairs": pairs,
+    }
+
+
 def save_comparison(result, comparisons_dir):
     os.makedirs(comparisons_dir, exist_ok=True)
     filepath = os.path.join(comparisons_dir, f"{result['id']}.json")
 
-    # Don't save the large plot arrays to disk — they're only needed for the live response
-    saveable = {k: v for k, v in result.items()
-                if k not in ("waveform_a", "waveform_b", "difference", "fft_a", "fft_b")}
+    # Strip large plot arrays — they're only needed for the live response
+    PLOT_KEYS = {"waveform_a", "waveform_b", "difference", "fft_a", "fft_b",
+                 "waveform_arrays", "fft_data"}
+    saveable = {}
+    for k, v in result.items():
+        if k in PLOT_KEYS:
+            continue
+        if k == "pairs":
+            saveable["pairs"] = [{pk: pv for pk, pv in p.items() if pk != "difference"} for p in v]
+        else:
+            saveable[k] = v
 
     with open(filepath, "w") as f:
         json.dump(saveable, f, indent=2)

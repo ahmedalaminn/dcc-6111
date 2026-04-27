@@ -10,10 +10,7 @@ const state = {
   selectedWaveform: null,
   currentWaveformData: null,
   metricsHistory: [],
-  compareSourceA: null,
-  compareFileA: null,
-  compareSourceB: null,
-  compareFileB: null,
+  multiCompareSlots: [{source: null, file: null}, {source: null, file: null}],
 };
 
 // ---------------------------------------------------------------------------
@@ -22,9 +19,11 @@ const state = {
 let waveformChart = null;
 let fftChart = null;
 let metricsChart = null;
-let compareWaveformChart = null;
-let compareDiffChart = null;
-let compareFftChart = null;
+let multiWaveformChart = null;
+let multiFftChart = null;
+
+const MULTI_COLORS = ["#4f8ef7", "#f76b4f", "#4fd18a", "#f7d24f", "#b44ff7"];
+const SLOT_NAMES  = ["Waveform A", "Waveform B", "Waveform C", "Waveform D", "Waveform E"];
 
 const CHART_DEFAULTS = {
   animation: false,
@@ -330,173 +329,221 @@ function renderMetricsHistory() {
 }
 
 // ---------------------------------------------------------------------------
-// Comparison tab
+// Multi-waveform comparison
 // ---------------------------------------------------------------------------
-async function populateCompareSelectors() {
-  const sources = state.sources;
-  ["compare-source-a", "compare-source-b"].forEach(id => {
-    const sel = document.getElementById(id);
-    sel.innerHTML = '<option value="">-- Select Source --</option>';
-    sources.forEach(s => {
-      const opt = document.createElement("option");
-      opt.value = s;
-      opt.textContent = s;
-      sel.appendChild(opt);
+const COMPARE_SOURCES = ["sourceA", "sourceB", "sourceC", "sourceD", "sourceE"];
+
+function renderMultiCompareRows() {
+  const container = document.getElementById("multi-compare-rows");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const slots = state.multiCompareSlots;
+  const n = slots.length;
+  const srcOptions = COMPARE_SOURCES.map(s => `<option value="${s}">${s}</option>`).join("");
+
+  slots.forEach((slot, idx) => {
+    const row = document.createElement("div");
+    row.className = "multi-compare-row";
+
+    row.innerHTML = `
+      <div class="slot-badge" style="background:${MULTI_COLORS[idx]}">${idx + 1}</div>
+      <div class="form-group" style="flex:1;min-width:140px">
+        <label>Source</label>
+        <select class="multi-source-sel" data-slot="${idx}">
+          <option value="">-- Select --</option>
+          ${srcOptions}
+        </select>
+      </div>
+      <div class="form-group" style="flex:1;min-width:140px">
+        <label>File</label>
+        <select class="multi-file-sel" data-slot="${idx}">
+          <option value="">-- Select --</option>
+        </select>
+      </div>
+      ${n > 2 ? `<button class="btn btn-remove-slot" data-slot="${idx}" title="Remove">×</button>` : '<div style="width:46px"></div>'}
+    `;
+    container.appendChild(row);
+
+    row.querySelector(".multi-source-sel").addEventListener("change", e =>
+      onMultiSourceChange(idx, e.target.value)
+    );
+    row.querySelector(".multi-file-sel").addEventListener("change", e => {
+      state.multiCompareSlots[idx].file = e.target.value || null;
     });
+    if (n > 2) {
+      row.querySelector(".btn-remove-slot").addEventListener("click", () => removeMultiCompareSlot(idx));
+    }
+
+    // Restore previous selection if slot already had one
+    if (slot.source) {
+      const srcSel = row.querySelector(".multi-source-sel");
+      srcSel.value = slot.source;
+      onMultiSourceChange(idx, slot.source, slot.file);
+    }
   });
+
+  const addBtn = document.getElementById("btn-add-waveform");
+  if (addBtn) addBtn.disabled = n >= 5;
 }
 
-async function onCompareSourceChange(sourceId, fileSelectorId) {
-  const sel = document.getElementById(fileSelectorId);
-  sel.innerHTML = '<option value="">-- Select File --</option>';
+async function onMultiSourceChange(slotIdx, sourceId, preselectedFile = null) {
+  state.multiCompareSlots[slotIdx].source = sourceId || null;
+  state.multiCompareSlots[slotIdx].file = null;
+
+  const fileSel = document.querySelector(`.multi-file-sel[data-slot="${slotIdx}"]`);
+  if (!fileSel) return;
+  fileSel.innerHTML = '<option value="">-- Select --</option>';
   if (!sourceId) return;
+
   try {
     const data = await apiFetch(`/api/sources/${sourceId}/waveforms`);
     (data.waveforms || []).forEach(f => {
       const opt = document.createElement("option");
       opt.value = f;
       opt.textContent = f;
-      sel.appendChild(opt);
+      if (f === preselectedFile) {
+        opt.selected = true;
+        state.multiCompareSlots[slotIdx].file = f;
+      }
+      fileSel.appendChild(opt);
     });
   } catch (e) {
-    console.warn(e);
+    console.warn("Failed to load files for slot", slotIdx, e);
   }
 }
 
-async function runComparison() {
-  const sourceA = document.getElementById("compare-source-a").value;
-  const fileA = document.getElementById("compare-file-a").value;
-  const sourceB = document.getElementById("compare-source-b").value;
-  const fileB = document.getElementById("compare-file-b").value;
+function addMultiCompareSlot() {
+  if (state.multiCompareSlots.length >= 5) return;
+  state.multiCompareSlots.push({source: null, file: null});
+  renderMultiCompareRows();
+}
 
-  if (!sourceA || !fileA || !sourceB || !fileB) {
-    setStatus("Select both waveforms to compare.", true);
-    return;
+function removeMultiCompareSlot(idx) {
+  if (state.multiCompareSlots.length <= 2) return;
+  state.multiCompareSlots.splice(idx, 1);
+  renderMultiCompareRows();
+}
+
+async function runMultiComparison() {
+  const slots = state.multiCompareSlots;
+  for (let i = 0; i < slots.length; i++) {
+    if (!slots[i].source || !slots[i].file) {
+      setStatus(`Select source and file for waveform ${i + 1}.`, true);
+      return;
+    }
   }
 
   setStatus("Running comparison…");
   try {
-    const result = await apiFetch("/api/compare", {
+    const result = await apiFetch("/api/compare/multi", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ source_a: sourceA, filename_a: fileA, source_b: sourceB, filename_b: fileB }),
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        waveforms: slots.map(s => ({source_id: s.source, filename: s.file})),
+      }),
     });
-    renderComparisonResult(result);
-    setStatus(`Comparison complete — RMSE: ${result.rmse.toFixed(6)}, Correlation: ${result.correlation.toFixed(4)}`);
+    renderMultiCompareResult(result);
+    setStatus(`Comparison complete — ${result.labels.length} waveforms, ${result.pairs.length} pair(s)`);
   } catch (e) {
     setStatus(`Comparison error: ${e.message}`, true);
   }
 }
 
-function findOnset(samples) {
-  // Find the first index where the signal becomes meaningfully active.
-  // Uses a rolling window of 10 points, threshold at 30% of peak absolute value.
-  const peak = Math.max(...samples.map(s => Math.abs(s)));
-  if (peak === 0) return 0;
-  const threshold = peak * 0.3;
-  const window = 10;
-  for (let i = 0; i < samples.length - window; i++) {
-    const rms = Math.sqrt(samples.slice(i, i + window).reduce((s, v) => s + v * v, 0) / window);
-    if (rms > threshold) return Math.max(0, i);
-  }
-  return 0;
-}
+function renderMultiCompareResult(result) {
+  const maxLen = Math.max(...result.waveform_arrays.map(a => a.length));
+  const sampleLabels = Array.from({length: maxLen}, (_, i) => i);
 
-function renderComparisonResult(result) {
-  // Summary metrics
-  document.getElementById("cmp-rmse").textContent = result.rmse.toFixed(6);
-  document.getElementById("cmp-correlation").textContent = result.correlation.toFixed(4);
-  document.getElementById("cmp-lag").textContent = result.alignment_lag_samples;
-
-  // Degradation indicators
-  const degList = document.getElementById("degradation-list");
-  if (result.degradation_indicators && result.degradation_indicators.length > 0) {
-    degList.innerHTML = result.degradation_indicators.map(d => `<li>${d}</li>`).join("");
-  } else {
-    degList.innerHTML = '<li class="no-degradation" style="list-style:none;background:none;border:none;color:var(--green)">✓ No degradation indicators detected.</li>';
-  }
-
-  // Waveform overlay chart — shift one dataset with leading nulls so both
-  // active portions start at the same x position, then slice both to the
-  // shared onset so the blank leading region doesn't compress the active view.
-  const onsetA = findOnset(result.waveform_a);
-  const onsetB = findOnset(result.waveform_b);
-  const shift = onsetB - onsetA;
-  let dataA = result.waveform_a;
-  let dataB = result.waveform_b;
-  if (shift > 0) {
-    dataA = Array(shift).fill(null).concat(result.waveform_a);
-  } else if (shift < 0) {
-    dataB = Array(-shift).fill(null).concat(result.waveform_b);
-  }
-  // Trim both to start just before the shared onset so the chart isn't
-  // dominated by blank/null leading space.
-  const sharedOnset = Math.max(onsetA, onsetB);
-  const trimStart = Math.max(0, sharedOnset - 10);
-  dataA = dataA.slice(trimStart);
-  dataB = dataB.slice(trimStart);
-  const totalLen = Math.max(dataA.length, dataB.length);
-
-  const ctxW = document.getElementById("compare-waveform-chart").getContext("2d");
-  if (compareWaveformChart) compareWaveformChart.destroy();
-  const labels = Array.from({ length: totalLen }, (_, i) => i);
-  compareWaveformChart = new Chart(ctxW, {
+  // Waveform overlay — label each dataset by slot letter (A, B, C…), not source/file path
+  const ctxW = document.getElementById("multi-waveform-chart").getContext("2d");
+  if (multiWaveformChart) multiWaveformChart.destroy();
+  multiWaveformChart = new Chart(ctxW, {
     type: "line",
     data: {
-      labels,
-      datasets: [
-        makeLineDataset(result.label_a, dataA, "#4f8ef7"),
-        makeLineDataset(result.label_b, dataB, "#f76b4f"),
-      ],
+      labels: sampleLabels,
+      datasets: result.waveform_arrays.map((arr, i) =>
+        makeLineDataset(SLOT_NAMES[i], arr, MULTI_COLORS[i])
+      ),
     },
     options: {
       ...CHART_DEFAULTS,
       scales: {
-        x: { ...CHART_DEFAULTS.scales.x, title: { display: true, text: "Sample", color: "#667085" } },
-        y: { ...CHART_DEFAULTS.scales.y, title: { display: true, text: "Amplitude", color: "#667085" } },
+        x: {...CHART_DEFAULTS.scales.x, title: {display: true, text: "Sample", color: "#667085"}},
+        y: {...CHART_DEFAULTS.scales.y, title: {display: true, text: "Amplitude", color: "#667085"}},
       },
     },
   });
 
-  // Difference chart
-  const ctxD = document.getElementById("compare-diff-chart").getContext("2d");
-  if (compareDiffChart) compareDiffChart.destroy();
-  const diffLabels = Array.from({ length: result.difference.length }, (_, i) => i);
-  compareDiffChart = new Chart(ctxD, {
-    type: "line",
-    data: {
-      labels: diffLabels,
-      datasets: [makeLineDataset("A − B (aligned)", result.difference, "#f7d24f")],
-    },
-    options: {
-      ...CHART_DEFAULTS,
-      scales: {
-        x: { ...CHART_DEFAULTS.scales.x, title: { display: true, text: "Sample", color: "#667085" } },
-        y: { ...CHART_DEFAULTS.scales.y, title: { display: true, text: "Difference", color: "#667085" } },
-      },
-    },
-  });
+  // Pairwise metrics table — slot letter as primary label, source/file as secondary
+  document.getElementById("multi-pairs-table").innerHTML = `
+    <table class="metrics-table">
+      <thead>
+        <tr>
+          <th>Pair</th>
+          <th>RMSE</th>
+          <th>Correlation</th>
+          <th>Lag (samples)</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${result.pairs.map(p => `
+          <tr>
+            <td>
+              <span class="pair-dot" style="background:${MULTI_COLORS[p.i]}"></span>
+              <strong>${SLOT_NAMES[p.i]}</strong>
+              <span style="color:var(--text-muted);font-size:11px;margin-left:4px">${p.label_i}</span>
+              &nbsp;vs&nbsp;
+              <span class="pair-dot" style="background:${MULTI_COLORS[p.j]}"></span>
+              <strong>${SLOT_NAMES[p.j]}</strong>
+              <span style="color:var(--text-muted);font-size:11px;margin-left:4px">${p.label_j}</span>
+            </td>
+            <td>${p.rmse.toFixed(6)}</td>
+            <td>${p.correlation.toFixed(4)}</td>
+            <td>${p.alignment_lag_samples}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
 
   // FFT overlay
-  const ctxF = document.getElementById("compare-fft-chart").getContext("2d");
-  if (compareFftChart) compareFftChart.destroy();
-  compareFftChart = new Chart(ctxF, {
+  const ctxF = document.getElementById("multi-fft-chart").getContext("2d");
+  if (multiFftChart) multiFftChart.destroy();
+  multiFftChart = new Chart(ctxF, {
     type: "line",
     data: {
-      labels: result.fft_a.freqs.map(f => f.toFixed(1)),
-      datasets: [
-        makeLineDataset(`FFT ${result.label_a}`, result.fft_a.magnitudes, "#4f8ef7"),
-        makeLineDataset(`FFT ${result.label_b}`, result.fft_b.magnitudes, "#f76b4f"),
-      ],
+      labels: result.fft_data[0].freqs.map(f => Number(f).toFixed(1)),
+      datasets: result.fft_data.map((fft, i) =>
+        makeLineDataset(`FFT ${SLOT_NAMES[i]}`, fft.magnitudes, MULTI_COLORS[i])
+      ),
     },
     options: {
       ...CHART_DEFAULTS,
       scales: {
-        x: { ...CHART_DEFAULTS.scales.x, title: { display: true, text: "Frequency (Hz)", color: "#667085" } },
-        y: { ...CHART_DEFAULTS.scales.y, title: { display: true, text: "Magnitude", color: "#667085" } },
+        x: {...CHART_DEFAULTS.scales.x, title: {display: true, text: "Frequency (Hz)", color: "#667085"}},
+        y: {...CHART_DEFAULTS.scales.y, title: {display: true, text: "Magnitude", color: "#667085"}},
       },
     },
   });
+
+  // Degradation indicators
+  const degDiv = document.getElementById("multi-degradation");
+  const flagged = result.pairs.filter(p => p.degradation_indicators && p.degradation_indicators.length > 0);
+  if (flagged.length === 0) {
+    degDiv.innerHTML = '<div class="no-degradation" style="padding:12px">✓ No degradation indicators detected in any pair.</div>';
+  } else {
+    degDiv.innerHTML = flagged.map(p => `
+      <div class="degradation-pair">
+        <div class="degradation-pair-label">
+          <span class="pair-dot" style="background:${MULTI_COLORS[p.i]}"></span>
+          ${SLOT_NAMES[p.i]} vs
+          <span class="pair-dot" style="background:${MULTI_COLORS[p.j]}"></span>
+          ${SLOT_NAMES[p.j]}
+        </div>
+        <ul class="degradation-list">${p.degradation_indicators.map(d => `<li>${d}</li>`).join("")}</ul>
+      </div>
+    `).join("");
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -654,7 +701,7 @@ Add --help to any command for detailed usage.
 function switchTab(tabId) {
   document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.toggle("active", btn.dataset.tab === tabId));
   document.querySelectorAll(".tab-panel").forEach(panel => panel.classList.toggle("active", panel.id === tabId));
-  if (tabId === "tab-compare") populateCompareSelectors();
+  if (tabId === "tab-compare") renderMultiCompareRows();
   if (tabId === "tab-reports") loadReports();
   if (tabId === "tab-metrics") {
     if (state.selectedSource && state.metricsHistory.length === 0) {
@@ -677,15 +724,8 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.addEventListener("click", () => switchTab(btn.dataset.tab));
   });
 
-  // Compare source selectors
-  document.getElementById("compare-source-a").addEventListener("change", e =>
-    onCompareSourceChange(e.target.value, "compare-file-a")
-  );
-  document.getElementById("compare-source-b").addEventListener("change", e =>
-    onCompareSourceChange(e.target.value, "compare-file-b")
-  );
-
-  document.getElementById("btn-run-compare").addEventListener("click", runComparison);
+  document.getElementById("btn-add-waveform").addEventListener("click", addMultiCompareSlot);
+  document.getElementById("btn-run-compare").addEventListener("click", runMultiComparison);
   document.getElementById("btn-ingest").addEventListener("click", ingestFile);
   document.getElementById("btn-refresh").addEventListener("click", loadSources);
   document.getElementById("btn-gen-report").addEventListener("click", generateReport);

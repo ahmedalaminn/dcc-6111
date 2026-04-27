@@ -141,89 +141,46 @@
         <div class="card">
           <div class="card-header">
             <span class="card-title">Waveform Comparison</span>
+            <span style="color:var(--text-muted);font-size:12px">2–5 waveforms simultaneously</span>
           </div>
           <div class="card-body">
-            <div class="compare-selectors">
-              <div class="form-group">
-                <label>Source A</label>
-                <select id="compare-source-a"><option value="">-- Select --</option></select>
-              </div>
-              <div class="form-group">
-                <label>File A</label>
-                <select id="compare-file-a"><option value="">-- Select --</option></select>
-              </div>
-              <div class="form-group">
-                <label>Source B</label>
-                <select id="compare-source-b"><option value="">-- Select --</option></select>
-              </div>
-              <div class="form-group">
-                <label>File B</label>
-                <select id="compare-file-b"><option value="">-- Select --</option></select>
-              </div>
-              <button class="btn btn-primary" id="btn-run-compare" style="align-self:flex-end">Compare -&gt;</button>
+            <div id="multi-compare-rows"></div>
+            <div style="display:flex;gap:8px;margin-top:14px;align-items:center">
+              <button class="btn" id="btn-add-waveform">+ Add Waveform</button>
+              <button class="btn btn-primary" id="btn-run-compare">Compare -&gt;</button>
             </div>
           </div>
         </div>
 
-        <!-- Summary metrics -->
-        <div class="card">
-          <div class="card-header"><span class="card-title">Comparison Summary</span></div>
-          <div class="card-body">
-            <div class="metrics-grid">
-              <div class="metric-tile">
-                <div class="label">RMSE</div>
-                <div class="value" id="cmp-rmse">—</div>
-              </div>
-              <div class="metric-tile">
-                <div class="label">Correlation</div>
-                <div class="value" id="cmp-correlation">—</div>
-              </div>
-              <div class="metric-tile">
-                <div class="label">Alignment Lag (samples)</div>
-                <div class="value" id="cmp-lag">—</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Degradation indicators -->
-        <div class="card">
-          <div class="card-header"><span class="card-title">Degradation Indicators</span></div>
-          <div class="card-body">
-            <ul class="degradation-list" id="degradation-list">
-              <li style="list-style:none;background:none;border:none;color:var(--text-muted)">Run a comparison to see indicators.</li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Waveform overlay -->
         <div class="card">
           <div class="card-header"><span class="card-title">Waveform Overlay</span></div>
           <div class="card-body">
-            <div class="chart-container" style="height:250px">
-              <canvas id="compare-waveform-chart"></canvas>
+            <div class="chart-container" style="height:260px">
+              <canvas id="multi-waveform-chart"></canvas>
             </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><span class="card-title">Pairwise Metrics</span></div>
+          <div class="card-body" id="multi-pairs-table">
+            <div class="empty-state" style="padding:24px">Run a comparison to see pairwise metrics.</div>
           </div>
         </div>
 
         <div class="compare-grid">
-          <!-- Difference signal -->
-          <div class="card">
-            <div class="card-header"><span class="card-title">Difference Signal (A − B aligned)</span></div>
-            <div class="card-body">
-              <div class="chart-container" style="height:200px">
-                <canvas id="compare-diff-chart"></canvas>
-              </div>
-            </div>
-          </div>
-
-          <!-- FFT overlay -->
           <div class="card">
             <div class="card-header"><span class="card-title">FFT Comparison</span></div>
             <div class="card-body">
               <div class="chart-container" style="height:200px">
-                <canvas id="compare-fft-chart"></canvas>
+                <canvas id="multi-fft-chart"></canvas>
               </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Degradation Indicators</span></div>
+            <div class="card-body" id="multi-degradation">
+              <div class="empty-state" style="padding:24px">Run a comparison to see degradation indicators.</div>
             </div>
           </div>
         </div>
