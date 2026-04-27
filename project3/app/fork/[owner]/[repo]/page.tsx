@@ -138,7 +138,7 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
         <section className="slb-alert slb-alert--error">{errorMessage ?? "Unable to compute comparison."}</section>
         <div className="slb-action-row">
           <Link href="/" className="slb-button-secondary">
-            Back To Repositories ->
+            Back To Repositories -&gt;
           </Link>
         </div>
       </div>
@@ -161,7 +161,7 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
             </h1>
           </div>
           <Link href="/" className="slb-button-secondary">
-            Back To Repositories ->
+            Back To Repositories -&gt;
           </Link>
         </div>
 
@@ -214,7 +214,7 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
 
             <div className="slb-action-row">
               <button type="submit" className="slb-button">
-                Compare Branches ->
+                Compare Branches -&gt;
               </button>
             </div>
           </form>
@@ -320,7 +320,7 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
               {comparison.upstreamHead.authorName} • {new Date(comparison.upstreamHead.committedDate).toLocaleString()}
             </p>
             <a href={comparison.upstreamHead.commitUrl} target="_blank" rel="noopener noreferrer" className="slb-link-arrow">
-              View Upstream Head Commit ->
+              View Upstream Head Commit -&gt;
             </a>
           </div>
         </article>
@@ -338,7 +338,7 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
               {comparison.forkHead.authorName} • {new Date(comparison.forkHead.committedDate).toLocaleString()}
             </p>
             <a href={comparison.forkHead.commitUrl} target="_blank" rel="noopener noreferrer" className="slb-link-arrow">
-              View Fork Head Commit ->
+              View Fork Head Commit -&gt;
             </a>
           </div>
         </article>
@@ -353,7 +353,7 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
           </p>
           <div className="slb-action-row" style={{ marginTop: "12px" }}>
             <a href={comparison.compareUrl} target="_blank" rel="noopener noreferrer" className="slb-link-arrow">
-              Open Comparison On GitHub ->
+              Open Comparison On GitHub -&gt;
             </a>
           </div>
         </section>
@@ -376,7 +376,7 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
                   {comparison.forkUniqueCommits.map((commit) => (
                     <div key={commit.sha} className="slb-inset-card">
                       <a href={commit.commitUrl} target="_blank" rel="noopener noreferrer" className="slb-link-arrow">
-                        {commit.sha.slice(0, 10)} ->
+                        {commit.sha.slice(0, 10)} -&gt;
                       </a>
                       <p style={{ marginTop: "8px" }}>{commit.message}</p>
                     </div>
@@ -401,7 +401,7 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
                   {comparison.upstreamUniqueCommits.map((commit) => (
                     <div key={commit.sha} className="slb-inset-card">
                       <a href={commit.commitUrl} target="_blank" rel="noopener noreferrer" className="slb-link-arrow">
-                        {commit.sha.slice(0, 10)} ->
+                        {commit.sha.slice(0, 10)} -&gt;
                       </a>
                       <p style={{ marginTop: "8px" }}>{commit.message}</p>
                     </div>

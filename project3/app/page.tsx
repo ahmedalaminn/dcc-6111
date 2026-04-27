@@ -104,10 +104,10 @@ export default async function Home({ searchParams }: HomeProps) {
 
           <div className="slb-action-row">
             <Link href="/scan" className="slb-button">
-              Open Scan Workspace ->
+              Open Scan Workspace -&gt;
             </Link>
             <Link href="/api/auth/signout" className="slb-button-secondary">
-              Sign Out ->
+              Sign Out -&gt;
             </Link>
           </div>
 
@@ -119,7 +119,7 @@ export default async function Home({ searchParams }: HomeProps) {
             </p>
             <div className="slb-action-row" style={{ marginTop: "14px" }}>
               <Link href="/scan" className="slb-link-arrow">
-                Enter Project Scan ->
+                Enter Project Scan -&gt;
               </Link>
             </div>
           </section>

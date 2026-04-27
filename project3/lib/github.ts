@@ -214,6 +214,10 @@ const FRAMEWORK_SIGNATURES: Record<string, string[]> = {
   PHP: ["composer.json"],
 };
 
+function toPresetMode(mode: ScanMode): ScanPreset {
+  return mode === "custom" ? "standard" : mode;
+}
+
 function resolveScanConfig(config: ScanConfig): ResolvedScanConfig {
   const lagThresholdMode = config.lagThresholdMode ?? "balanced";
 
@@ -275,7 +279,7 @@ function resolveScanConfig(config: ScanConfig): ResolvedScanConfig {
 
     return {
       mode: config.mode,
-      commitDepth: SCAN_PRESET_DEPTHS[config.mode === "custom" ? "standard" : config.mode],
+      commitDepth: SCAN_PRESET_DEPTHS[toPresetMode(config.mode)],
       lagThresholdMode: "custom",
       customLagCommitThreshold: lagCommitThreshold,
       customLagNoSyncDaysThreshold: lagNoSyncDaysThreshold,
@@ -293,15 +297,15 @@ function resolveScanConfig(config: ScanConfig): ResolvedScanConfig {
       );
     }
     return {
-      mode: config.mode === "custom" ? "standard" : config.mode,
+      mode: toPresetMode(config.mode),
       commitDepth: depth,
       lagThresholdMode,
     };
   }
 
   return {
-    mode: config.mode === "custom" ? "standard" : config.mode,
-    commitDepth: SCAN_PRESET_DEPTHS[config.mode === "custom" ? "standard" : config.mode],
+    mode: toPresetMode(config.mode),
+    commitDepth: SCAN_PRESET_DEPTHS[toPresetMode(config.mode)],
     lagThresholdMode,
   };
 }

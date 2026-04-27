@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { SCAN_PRESET_DEPTHS } from "@/lib/github";
-import type { ScanMode } from "@/lib/github";
+import type { ScanMode, ScanPreset } from "@/lib/github";
 
 type ScanControlsProps = {
   selectedScanMode?: ScanMode;
@@ -20,7 +20,7 @@ type ScanControlsProps = {
   targetPath?: string;
 };
 
-const SCAN_MODE_OPTIONS: Array<{ value: ScanMode; label: string }> = [
+const SCAN_MODE_OPTIONS: Array<{ value: ScanPreset; label: string }> = [
   { value: "quick", label: "Quick" },
   { value: "standard", label: "Standard" },
   { value: "deep", label: "Deep" },

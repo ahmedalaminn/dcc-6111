@@ -180,7 +180,7 @@ export default async function ScanPage({ searchParams }: ScanPageProps) {
             <h1>Project Fork Analysis</h1>
           </div>
           <Link href="/" className="slb-button-secondary">
-            Back To Repositories ->
+            Back To Repositories -&gt;
           </Link>
         </div>
         <div className="slb-card-body slb-stack">
@@ -322,7 +322,7 @@ export default async function ScanPage({ searchParams }: ScanPageProps) {
                                 }}
                                 className="slb-link-arrow"
                               >
-                                Open Detail View ->
+                                Open Detail View -&gt;
                               </Link>
                             </div>
                           </td>
@@ -391,7 +391,7 @@ export default async function ScanPage({ searchParams }: ScanPageProps) {
                               </div>
                               <div style={{ marginTop: "8px" }}>
                                 <a href={fork.compareUrl} target="_blank" rel="noopener noreferrer" className="slb-link-arrow">
-                                  Open GitHub Comparison ->
+                                  Open GitHub Comparison -&gt;
                                 </a>
                               </div>
                             </td>
