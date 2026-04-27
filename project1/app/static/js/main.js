@@ -30,10 +30,10 @@ const CHART_DEFAULTS = {
   animation: false,
   responsive: true,
   maintainAspectRatio: false,
-  plugins: { legend: { labels: { color: "#e0e3f0", font: { size: 11 } } } },
+  plugins: { legend: { labels: { color: "#091426", font: { size: 11 } } } },
   scales: {
-    x: { ticks: { color: "#737897", maxTicksLimit: 10 }, grid: { color: "#2e3147" } },
-    y: { ticks: { color: "#737897" }, grid: { color: "#2e3147" } },
+    x: { ticks: { color: "#667085", maxTicksLimit: 10 }, grid: { color: "#d7dce6" } },
+    y: { ticks: { color: "#667085" }, grid: { color: "#d7dce6" } },
   },
 };
 
@@ -64,7 +64,7 @@ async function apiFetch(url, options = {}) {
 function setStatus(msg, isError = false) {
   const bar = document.getElementById("status-bar");
   bar.textContent = msg;
-  bar.style.color = isError ? "var(--accent2)" : "var(--text-muted)";
+  bar.style.color = isError ? "var(--danger)" : "var(--text-muted)";
 }
 
 // ---------------------------------------------------------------------------
@@ -170,8 +170,8 @@ function renderWaveformChart(data) {
       },
       scales: {
         ...CHART_DEFAULTS.scales,
-        x: { ...CHART_DEFAULTS.scales.x, title: { display: true, text: "Time (s)", color: "#737897" } },
-        y: { ...CHART_DEFAULTS.scales.y, title: { display: true, text: data.units || "Amplitude", color: "#737897" } },
+        x: { ...CHART_DEFAULTS.scales.x, title: { display: true, text: "Time (s)", color: "#667085" } },
+        y: { ...CHART_DEFAULTS.scales.y, title: { display: true, text: data.units || "Amplitude", color: "#667085" } },
       },
     },
   });
@@ -211,8 +211,8 @@ function renderFftChart() {
     options: {
       ...CHART_DEFAULTS,
       scales: {
-        x: { ...CHART_DEFAULTS.scales.x, title: { display: true, text: "Frequency (Hz)", color: "#737897" } },
-        y: { ...CHART_DEFAULTS.scales.y, title: { display: true, text: "Magnitude", color: "#737897" } },
+        x: { ...CHART_DEFAULTS.scales.x, title: { display: true, text: "Frequency (Hz)", color: "#667085" } },
+        y: { ...CHART_DEFAULTS.scales.y, title: { display: true, text: "Magnitude", color: "#667085" } },
       },
     },
   });
@@ -220,32 +220,34 @@ function renderFftChart() {
 
 function renderMetricTiles(waveformData) {
   const grid = document.getElementById("metrics-tiles");
-  const src = state.selectedSource;
-  const fname = waveformData.filename;
-
-  // Fetch scalar metrics from CSV history
-  apiFetch(`/api/sources/${src}/metrics`).then(data => {
-    const row = data.metrics.find(r => r.filename === fname);
-    if (!row) return;
-
-    const tiles = [
-      { label: "Peak-to-Peak", value: parseFloat(row.peak_to_peak).toFixed(5) },
-      { label: "RMS", value: parseFloat(row.rms).toFixed(5) },
-      { label: "Mean", value: parseFloat(row.mean).toFixed(5) },
-      { label: "Std Dev", value: parseFloat(row.std).toFixed(5) },
-      { label: "SNR (dB)", value: row.snr_db !== "None" ? parseFloat(row.snr_db).toFixed(2) : "N/A" },
-      { label: "Dom. Freq (Hz)", value: parseFloat(row.dominant_freq_hz).toFixed(2) },
-      { label: "Samples", value: parseInt(row.num_samples).toLocaleString() },
-      { label: "Sample Rate", value: `${waveformData.sample_rate} Hz` },
-    ];
-
-    grid.innerHTML = tiles.map(t => `
-      <div class="metric-tile">
-        <div class="label">${t.label}</div>
-        <div class="value">${t.value}</div>
+  const metrics = waveformData.metrics;
+  if (!metrics) {
+    grid.innerHTML = `
+      <div class="empty-state" style="grid-column:1/-1">
+        <div class="icon">[]</div>
+        <div>Metrics unavailable for this waveform.</div>
       </div>
-    `).join("");
-  }).catch(() => {});
+    `;
+    return;
+  }
+
+  const tiles = [
+    { label: "Peak-to-Peak", value: Number(metrics.peak_to_peak).toFixed(5) },
+    { label: "RMS", value: Number(metrics.rms).toFixed(5) },
+    { label: "Mean", value: Number(metrics.mean).toFixed(5) },
+    { label: "Std Dev", value: Number(metrics.std).toFixed(5) },
+    { label: "SNR (dB)", value: metrics.snr_db !== null ? Number(metrics.snr_db).toFixed(2) : "N/A" },
+    { label: "Dom. Freq (Hz)", value: Number(metrics.dominant_freq_hz).toFixed(2) },
+    { label: "Samples", value: Number(metrics.num_samples).toLocaleString() },
+    { label: "Sample Rate", value: `${waveformData.sample_rate} Hz` },
+  ];
+
+  grid.innerHTML = tiles.map(t => `
+    <div class="metric-tile">
+      <div class="label">${t.label}</div>
+      <div class="value">${t.value}</div>
+    </div>
+  `).join("");
 }
 
 // ---------------------------------------------------------------------------
@@ -275,7 +277,7 @@ function renderMetricsHistory() {
         ...CHART_DEFAULTS,
         plugins: {
           ...CHART_DEFAULTS.plugins,
-          title: { display: true, text: "Select a source to view metrics trend", color: "#737897" },
+          title: { display: true, text: "Select a source to view metrics trend", color: "#667085" },
         },
       },
     });
@@ -318,9 +320,9 @@ function renderMetricsHistory() {
     options: {
       ...CHART_DEFAULTS,
       scales: {
-        x:     { ...CHART_DEFAULTS.scales.x, title: { display: true, text: "Capture", color: "#737897" } },
-        y:     { ...CHART_DEFAULTS.scales.y, position: "left",  title: { display: true, text: "Amplitude", color: "#737897" }, beginAtZero: true },
-        yFreq: { ...CHART_DEFAULTS.scales.y, position: "right", title: { display: true, text: "Frequency (Hz)", color: "#f7d24f" },
+        x:     { ...CHART_DEFAULTS.scales.x, title: { display: true, text: "Capture", color: "#667085" } },
+        y:     { ...CHART_DEFAULTS.scales.y, position: "left",  title: { display: true, text: "Amplitude", color: "#667085" }, beginAtZero: true },
+        yFreq: { ...CHART_DEFAULTS.scales.y, position: "right", title: { display: true, text: "Frequency (Hz)", color: "#0014dc" },
                  grid: { drawOnChartArea: false }, beginAtZero: true },
       },
     },
@@ -450,8 +452,8 @@ function renderComparisonResult(result) {
     options: {
       ...CHART_DEFAULTS,
       scales: {
-        x: { ...CHART_DEFAULTS.scales.x, title: { display: true, text: "Sample", color: "#737897" } },
-        y: { ...CHART_DEFAULTS.scales.y, title: { display: true, text: "Amplitude", color: "#737897" } },
+        x: { ...CHART_DEFAULTS.scales.x, title: { display: true, text: "Sample", color: "#667085" } },
+        y: { ...CHART_DEFAULTS.scales.y, title: { display: true, text: "Amplitude", color: "#667085" } },
       },
     },
   });
@@ -469,8 +471,8 @@ function renderComparisonResult(result) {
     options: {
       ...CHART_DEFAULTS,
       scales: {
-        x: { ...CHART_DEFAULTS.scales.x, title: { display: true, text: "Sample", color: "#737897" } },
-        y: { ...CHART_DEFAULTS.scales.y, title: { display: true, text: "Difference", color: "#737897" } },
+        x: { ...CHART_DEFAULTS.scales.x, title: { display: true, text: "Sample", color: "#667085" } },
+        y: { ...CHART_DEFAULTS.scales.y, title: { display: true, text: "Difference", color: "#667085" } },
       },
     },
   });
@@ -490,8 +492,8 @@ function renderComparisonResult(result) {
     options: {
       ...CHART_DEFAULTS,
       scales: {
-        x: { ...CHART_DEFAULTS.scales.x, title: { display: true, text: "Frequency (Hz)", color: "#737897" } },
-        y: { ...CHART_DEFAULTS.scales.y, title: { display: true, text: "Magnitude", color: "#737897" } },
+        x: { ...CHART_DEFAULTS.scales.x, title: { display: true, text: "Frequency (Hz)", color: "#667085" } },
+        y: { ...CHART_DEFAULTS.scales.y, title: { display: true, text: "Magnitude", color: "#667085" } },
       },
     },
   });
@@ -540,10 +542,26 @@ async function loadReports() {
       return;
     }
     list.innerHTML = `<ul class="reports-list">${reports.map(r =>
-      `<li><a href="/api/reports/${r}" target="_blank">${r}</a></li>`
+      `<li>
+        <div class="report-row">
+          <a href="/api/reports/${r}" target="_blank">${r}</a>
+          <button type="button" class="report-delete-btn" data-report="${r}">Delete</button>
+        </div>
+      </li>`
     ).join("")}</ul>`;
   } catch (e) {
     setStatus(`Error loading reports: ${e.message}`, true);
+  }
+}
+
+async function deleteReport(filename) {
+  setStatus(`Deleting report ${filename}…`);
+  try {
+    await apiFetch(`/api/reports/${filename}`, { method: "DELETE" });
+    setStatus(`Deleted report: ${filename}`);
+    await loadReports();
+  } catch (e) {
+    setStatus(`Report delete error: ${e.message}`, true);
   }
 }
 
@@ -699,6 +717,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   document.getElementById("btn-term-clear").addEventListener("click", () => {
     document.getElementById("term-output").innerHTML = "";
+  });
+
+  document.getElementById("reports-list").addEventListener("click", e => {
+    if (!(e.target instanceof Element)) return;
+    const btn = e.target.closest(".report-delete-btn");
+    if (!btn) return;
+    deleteReport(btn.dataset.report);
   });
 
   // Quick action buttons

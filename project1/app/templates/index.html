@@ -7,13 +7,38 @@
   <link rel="stylesheet" href="/static/css/style.css" />
 </head>
 <body>
+<div class="suite-shell">
+  <header class="suite-masthead">
+    <div class="suite-brand">
+      <div class="suite-wordmark">slb</div>
+      <div class="suite-brand-copy">
+        <span class="suite-eyebrow">Internal Tool Suite</span>
+        <h1>Waveform Analyzer</h1>
+      </div>
+    </div>
+    <div class="suite-meta">
+      <span>Project 1</span>
+      <span class="suite-meta-divider"></span>
+      <span>Signal Analysis Workspace</span>
+    </div>
+  </header>
+
+  <div class="suite-subnav">
+    <span>Capture Ingest</span>
+    <span class="arrow">-&gt;</span>
+    <span>Waveform Analytics</span>
+    <span class="arrow">-&gt;</span>
+    <span>Comparison and Reporting</span>
+  </div>
+
 <div class="layout">
 
   <!-- ===== SIDEBAR ===== -->
   <aside class="sidebar">
     <div class="sidebar-header">
-      <h1>Waveform Monitor</h1>
-      <p>Signal Analysis &amp; Comparison</p>
+      <span class="sidebar-kicker">Operations Library</span>
+      <h2>Waveform Monitor</h2>
+      <p>Review source captures, trace signal health, and export engineering-ready reports.</p>
     </div>
 
     <div class="sidebar-section">Sources</div>
@@ -33,6 +58,10 @@
 
     <!-- Topbar / Tabs -->
     <div class="topbar">
+      <div class="topbar-caption">
+        <span>Workspace</span>
+        <strong>Analysis Views</strong>
+      </div>
       <div class="tabs">
         <button class="tab-btn active" data-tab="tab-waveform">Waveform</button>
         <button class="tab-btn" data-tab="tab-fft">FFT Spectrum</button>
@@ -43,8 +72,8 @@
         <button class="tab-btn" data-tab="tab-terminal">Terminal</button>
       </div>
       <div class="topbar-right">
-        <button class="btn btn-primary" id="btn-gen-report" title="Generate report for selected source">Generate Report</button>
-        <button class="btn" id="btn-refresh" title="Refresh source list">↻ Refresh</button>
+        <button class="btn btn-primary" id="btn-gen-report" title="Generate report for selected source">Generate Report -&gt;</button>
+        <button class="btn" id="btn-refresh" title="Refresh source list">Refresh Library</button>
       </div>
     </div>
 
@@ -131,7 +160,7 @@
                 <label>File B</label>
                 <select id="compare-file-b"><option value="">-- Select --</option></select>
               </div>
-              <button class="btn btn-primary" id="btn-run-compare" style="align-self:flex-end">Compare</button>
+              <button class="btn btn-primary" id="btn-run-compare" style="align-self:flex-end">Compare -&gt;</button>
             </div>
           </div>
         </div>
@@ -214,7 +243,7 @@
                 <label>Source ID override (optional)</label>
                 <input type="text" id="ingest-source-id" placeholder="e.g. sourceA" />
               </div>
-              <button class="btn btn-primary" id="btn-ingest" style="align-self:flex-end">Ingest</button>
+              <button class="btn btn-primary" id="btn-ingest" style="align-self:flex-end">Ingest -&gt;</button>
             </div>
             <p style="margin-top:12px;color:var(--text-muted);font-size:12px">
               Accepts WAVE v1 files or raw uint8 ADC captures (BBB onboard ADC). Format is
@@ -269,6 +298,7 @@ Type &lt;command&gt; --help for usage details.
     <div id="status-bar">Ready</div>
   </div><!-- /.main -->
 </div><!-- /.layout -->
+</div><!-- /.suite-shell -->
 
 <!-- Local copy first (BBB may not have internet), CDN fallback for dev -->
 <script src="/static/js/chart.umd.min.js"></script>

@@ -2,7 +2,7 @@ import { getServerSession } from "next-auth";
 import Link from "next/link";
 import { authOptions } from "@/lib/auth";
 import { fetchForkComparison, fetchRepoBranches } from "@/lib/github";
-import type { BranchSummary } from "@/lib/github";
+import type { BranchSummary, ForkComparison } from "@/lib/github";
 
 function deriveStatus(behindBy: number | null) {
   if (behindBy === null || behindBy === 0) {
@@ -16,6 +16,33 @@ function deriveStatus(behindBy: number | null) {
 
 function displayNumber(value: number | null) {
   return value === null ? "Not available" : value;
+}
+
+function AuthCard({
+  title,
+  body,
+  href,
+  action,
+}: {
+  title: string;
+  body: string;
+  href: string;
+  action: string;
+}) {
+  return (
+    <div className="slb-auth-shell">
+      <main className="slb-auth-card">
+        <span className="slb-kicker">Fork Comparison</span>
+        <h1>{title}</h1>
+        <p>{body}</p>
+        <div className="slb-action-row" style={{ marginTop: "20px" }}>
+          <Link href={href} className="slb-button">
+            {action}
+          </Link>
+        </div>
+      </main>
+    </div>
+  );
 }
 
 type ComparePageProps = {
@@ -36,39 +63,23 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
 
   if (!session) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-6 py-12 text-zinc-900">
-        <main className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-semibold tracking-tight">Fork Comparison</h1>
-          <p className="mt-4 text-sm text-zinc-700">You are not signed in.</p>
-          <div className="mt-6">
-            <Link
-              href="/api/auth/signin/github"
-              className="inline-flex rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
-            >
-              Sign in with GitHub
-            </Link>
-          </div>
-        </main>
-      </div>
+      <AuthCard
+        title="Sign In Required"
+        body="Authentication is required before comparing fork branches against upstream repositories."
+        href="/api/auth/signin/github"
+        action="Sign In With GitHub ->"
+      />
     );
   }
 
   if (!session.accessToken) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-6 py-12 text-zinc-900">
-        <main className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-semibold tracking-tight">Fork Comparison</h1>
-          <p className="mt-4 text-sm text-zinc-700">Missing GitHub access token. Sign out and sign in again.</p>
-          <div className="mt-6">
-            <Link
-              href="/api/auth/signout"
-              className="inline-flex rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
-            >
-              Sign out
-            </Link>
-          </div>
-        </main>
-      </div>
+      <AuthCard
+        title="Access Token Required"
+        body="The GitHub access token is missing from the current session. Sign out and sign in again."
+        href="/api/auth/signout"
+        action="Sign Out ->"
+      />
     );
   }
 
@@ -82,19 +93,12 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
 
   if (!upstreamOwner || !upstreamRepo || !upstreamBranch || !forkBranch) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-6 py-12 text-zinc-900">
-        <main className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-semibold tracking-tight">Fork Comparison</h1>
-          <p className="mt-4 text-sm text-zinc-700">
-            Missing comparison context. Please return to the repository list and open the fork again.
-          </p>
-          <div className="mt-6">
-            <Link href="/" className="text-sm text-zinc-700 underline">
-              Back to repositories
-            </Link>
-          </div>
-        </main>
-      </div>
+      <AuthCard
+        title="Comparison Context Missing"
+        body="Return to the repository inventory and reopen the fork so the upstream and branch context is restored."
+        href="/"
+        action="Back To Repositories ->"
+      />
     );
   }
 
@@ -107,10 +111,11 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
       fetchRepoBranches(session.accessToken, routeParams.owner, routeParams.repo),
     ]);
   } catch {
-    // Keep comparison usable even if branch listing fails.
+    upstreamBranches = [];
+    forkBranches = [];
   }
 
-  let comparison;
+  let comparison: ForkComparison | null = null;
   let errorMessage: string | null = null;
 
   try {
@@ -129,16 +134,13 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
 
   if (errorMessage || !comparison) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-6 py-12 text-zinc-900">
-        <main className="w-full max-w-lg rounded-2xl border border-red-200 bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-semibold tracking-tight text-red-700">Comparison Error</h1>
-          <p className="mt-4 text-sm text-red-700">{errorMessage ?? "Unable to compute comparison."}</p>
-          <div className="mt-6">
-            <Link href="/" className="text-sm text-zinc-700 underline">
-              Back to repositories
-            </Link>
-          </div>
-        </main>
+      <div className="slb-page">
+        <section className="slb-alert slb-alert--error">{errorMessage ?? "Unable to compute comparison."}</section>
+        <div className="slb-action-row">
+          <Link href="/" className="slb-button-secondary">
+            Back To Repositories ->
+          </Link>
+        </div>
       </div>
     );
   }
@@ -147,42 +149,38 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
   const status = deriveStatus(comparison.behindBy);
 
   return (
-    <div className="min-h-screen bg-zinc-100 px-6 py-10 text-zinc-900">
-      <main className="mx-auto w-full max-w-6xl space-y-6">
-        <section className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              <a
-                href={forkRepositoryUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-700 hover:underline"
-              >
+    <div className="slb-page">
+      <section className="slb-card">
+        <div className="slb-section-head">
+          <div>
+            <span className="slb-kicker">Fork Comparison</span>
+            <h1>
+              <a href={forkRepositoryUrl} target="_blank" rel="noopener noreferrer">
                 {comparison.forkOwner}/{comparison.forkRepo}
               </a>
             </h1>
-            <Link href="/" className="text-sm text-zinc-700 underline">
-              Back to repositories
-            </Link>
           </div>
-          <p className="mt-2 text-sm text-zinc-600">
-            Comparing fork branch <span className="font-mono">{comparison.forkBranch}</span> against upstream
-            <span className="ml-1 font-mono">
+          <Link href="/" className="slb-button-secondary">
+            Back To Repositories ->
+          </Link>
+        </div>
+
+        <div className="slb-card-body slb-stack">
+          <p className="slb-body-copy">
+            Comparing fork branch <span className="slb-mono">{comparison.forkBranch}</span> against upstream{" "}
+            <span className="slb-mono">
               {comparison.upstreamOwner}/{comparison.upstreamRepo}:{comparison.upstreamBranch}
             </span>
+            .
           </p>
 
-          <form method="GET" className="mt-4 grid gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4 md:grid-cols-[1fr_1fr_auto]">
+          <form method="GET" className="slb-form-grid slb-form-grid--2">
             <input type="hidden" name="upstreamOwner" value={upstreamOwner} />
             <input type="hidden" name="upstreamRepo" value={upstreamRepo} />
 
-            <label className="text-sm text-zinc-700">
-              <span className="mb-1 block">Upstream branch</span>
-              <select
-                name="upstreamBranch"
-                defaultValue={upstreamBranch}
-                className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2"
-              >
+            <label className="slb-field">
+              <span>Upstream Branch</span>
+              <select name="upstreamBranch" defaultValue={upstreamBranch} className="slb-select">
                 {upstreamBranches.length > 0
                   ? upstreamBranches.map((branch) => (
                       <option key={branch.name} value={branch.name}>
@@ -197,13 +195,9 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
               </select>
             </label>
 
-            <label className="text-sm text-zinc-700">
-              <span className="mb-1 block">Fork branch</span>
-              <select
-                name="forkBranch"
-                defaultValue={forkBranch}
-                className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2"
-              >
+            <label className="slb-field">
+              <span>Fork Branch</span>
+              <select name="forkBranch" defaultValue={forkBranch} className="slb-select">
                 {forkBranches.length > 0
                   ? forkBranches.map((branch) => (
                       <option key={branch.name} value={branch.name}>
@@ -218,209 +212,239 @@ export default async function ForkComparePage({ params, searchParams }: CompareP
               </select>
             </label>
 
-            <button
-              type="submit"
-              className="self-end rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700"
-            >
-              Compare
-            </button>
+            <div className="slb-action-row">
+              <button type="submit" className="slb-button">
+                Compare Branches ->
+              </button>
+            </div>
           </form>
-        </section>
+        </div>
+      </section>
 
-        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Comparison Summary</h2>
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-            <article className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 shadow-sm">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Ahead</p>
-              <p className="mt-2 text-lg font-semibold text-zinc-900">{displayNumber(comparison.aheadBy)}</p>
+      <section className="slb-kpi-grid">
+        <article className="slb-kpi">
+          <p className="slb-kpi__label">Ahead</p>
+          <p className="slb-kpi__value">{displayNumber(comparison.aheadBy)}</p>
+        </article>
+        <article className="slb-kpi">
+          <p className="slb-kpi__label">Behind</p>
+          <p className="slb-kpi__value">{displayNumber(comparison.behindBy)}</p>
+        </article>
+        <article className="slb-kpi">
+          <p className="slb-kpi__label">Status</p>
+          <p className="slb-kpi__value">{status}</p>
+        </article>
+        <article className="slb-kpi">
+          <p className="slb-kpi__label">Files Changed</p>
+          <p className="slb-kpi__value">{displayNumber(comparison.totalFilesChanged)}</p>
+        </article>
+      </section>
+
+      <section className="slb-card">
+        <div className="slb-section-head">
+          <div>
+            <span className="slb-kicker">Comparison Metrics</span>
+            <h2>Detailed Diff Summary</h2>
+          </div>
+        </div>
+        <div className="slb-card-body">
+          <div className="slb-grid-3">
+            <article className="slb-inset-card">
+              <span className="slb-kicker">Commit Distance</span>
+              {comparison.aheadBy !== null && comparison.behindBy !== null ? (
+                <div className="slb-stack" style={{ marginTop: "10px" }}>
+                  <p className="slb-body-copy">
+                    Fork -&gt; Upstream: <span className="slb-mono">+{comparison.aheadBy}</span>
+                  </p>
+                  <p className="slb-body-copy">
+                    Upstream -&gt; Fork: <span className="slb-mono">+{comparison.behindBy}</span>
+                  </p>
+                  <p className="slb-note">Arrow direction shows where commits need to be merged.</p>
+                  {comparison.commonAncestorSha ? (
+                    <p className="slb-note">Common ancestor: {comparison.commonAncestorSha.slice(0, 12)}</p>
+                  ) : null}
+                </div>
+              ) : (
+                <p className="slb-body-copy" style={{ marginTop: "10px" }}>
+                  Not available.
+                </p>
+              )}
             </article>
-            <article className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 shadow-sm">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Behind</p>
-              <p className="mt-2 text-lg font-semibold text-zinc-900">{displayNumber(comparison.behindBy)}</p>
+
+            <article className="slb-inset-card">
+              <span className="slb-kicker">Line Changes</span>
+              {comparison.diffUnavailable ? (
+                <p className="slb-body-copy" style={{ marginTop: "10px" }}>
+                  Not available.
+                </p>
+              ) : (
+                <div className="slb-stack" style={{ marginTop: "10px" }}>
+                  <p className="slb-body-copy">+{comparison.totalAdditions} added</p>
+                  <p className="slb-body-copy">-{comparison.totalDeletions} deleted</p>
+                  <p className="slb-body-copy">{comparison.totalChanges} total changed</p>
+                </div>
+              )}
             </article>
-            <article className="rounded-xl border border-zinc-200 bg-zinc-50 p-4 shadow-sm">
-              <p className="text-xs uppercase tracking-wide text-zinc-500">Status</p>
-              <p className="mt-2 text-lg font-semibold text-zinc-900">{status}</p>
+
+            <article className="slb-inset-card">
+              <span className="slb-kicker">File Changes</span>
+              {comparison.diffUnavailable ? (
+                <p className="slb-body-copy" style={{ marginTop: "10px" }}>
+                  Not available.
+                </p>
+              ) : (
+                <div className="slb-stack" style={{ marginTop: "10px" }}>
+                  <p className="slb-body-copy">{comparison.totalFilesChanged} changed files</p>
+                  <p className="slb-body-copy">{comparison.filesAdded} added</p>
+                  <p className="slb-body-copy">{comparison.filesDeleted} deleted</p>
+                  <p className="slb-body-copy">{comparison.filesModified} modified</p>
+                  <p className="slb-body-copy">{comparison.filesRenamed} renamed</p>
+                </div>
+              )}
             </article>
           </div>
-        </section>
+        </div>
+      </section>
 
-        <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-lg font-semibold">Detailed Diff</h2>
-          <div className="mt-4 grid gap-4 md:grid-cols-3">
-          <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">Commit Distance</p>
-            {comparison.aheadBy !== null && comparison.behindBy !== null ? (
-              <>
-                <p className="mt-2 text-sm text-zinc-700">
-                  Fork -&gt; Upstream: <span className="font-mono text-green-700">+{comparison.aheadBy}</span>
-                </p>
-                <p className="text-sm text-zinc-700">
-                  Upstream -&gt; Fork: <span className="font-mono text-amber-700">+{comparison.behindBy}</span>
-                </p>
-                <p className="mt-1 text-xs text-zinc-500">Arrow direction shows where commits need to be merged.</p>
-                {comparison.commonAncestorSha ? (
-                  <p className="mt-2 text-xs text-zinc-500">Common ancestor: {comparison.commonAncestorSha.slice(0, 12)}</p>
-                ) : null}
-              </>
-            ) : (
-              <p className="mt-2 text-sm text-zinc-600">Not available.</p>
-            )}
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">Line Changes</p>
-            {comparison.diffUnavailable ? (
-              <p className="mt-2 text-sm text-zinc-600">Not available.</p>
-            ) : (
-              <>
-                <p className="mt-2 text-sm text-green-700">+{comparison.totalAdditions} added</p>
-                <p className="text-sm text-red-700">-{comparison.totalDeletions} deleted</p>
-                <p className="text-sm text-zinc-700">{comparison.totalChanges} total changed</p>
-              </>
-            )}
-          </article>
-          <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">File Changes</p>
-            {comparison.diffUnavailable ? (
-              <p className="mt-2 text-sm text-zinc-600">Not available.</p>
-            ) : (
-              <>
-                <p className="mt-2 text-sm text-zinc-700">{comparison.totalFilesChanged} changed files</p>
-                <p className="text-sm text-zinc-700">{comparison.filesAdded} added</p>
-                <p className="text-sm text-zinc-700">{comparison.filesDeleted} deleted</p>
-                <p className="text-sm text-zinc-700">{comparison.filesModified} modified</p>
-                <p className="text-sm text-zinc-700">{comparison.filesRenamed} renamed</p>
-              </>
-            )}
-          </article>
+      <section className="slb-grid-2">
+        <article className="slb-card">
+          <div className="slb-section-head">
+            <div>
+              <span className="slb-kicker">Upstream Head</span>
+              <h3>{comparison.upstreamHead.sha.slice(0, 12)}</h3>
+            </div>
           </div>
-        </section>
-
-        {comparison.diffUnavailable ? (
-          <section className="rounded-2xl border border-amber-300 bg-amber-50 p-6 text-amber-900 shadow-sm">
-            <h2 className="text-base font-semibold">Detailed Diff Not Available</h2>
-            <p className="mt-2 text-sm">
-              {comparison.diffUnavailableReason ?? "GitHub could not generate the diff for this comparison."}
-            </p>
-            <p className="mt-2 text-sm">
-              This is a GitHub API limitation for this comparison range. Estimated commit distance and recent unique
-              commits are shown below.
-            </p>
-            <a
-              href={comparison.compareUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 inline-flex text-sm font-medium underline"
-            >
-              Open comparison on GitHub
-            </a>
-          </section>
-        ) : null}
-
-        <section className="grid gap-4 md:grid-cols-2">
-          <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">Upstream Head</p>
-            <p className="mt-2 text-sm font-mono text-zinc-900">{comparison.upstreamHead.sha.slice(0, 12)}</p>
-            <p className="mt-1 text-sm text-zinc-800">{comparison.upstreamHead.message}</p>
-            <p className="mt-1 text-xs text-zinc-600">
+          <div className="slb-card-body slb-stack">
+            <p>{comparison.upstreamHead.message}</p>
+            <p className="slb-note">
               {comparison.upstreamHead.authorName} • {new Date(comparison.upstreamHead.committedDate).toLocaleString()}
             </p>
-            <a
-              href={comparison.upstreamHead.commitUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-flex text-xs font-medium underline"
-            >
-              View upstream head commit
+            <a href={comparison.upstreamHead.commitUrl} target="_blank" rel="noopener noreferrer" className="slb-link-arrow">
+              View Upstream Head Commit ->
             </a>
-          </article>
+          </div>
+        </article>
 
-          <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-            <p className="text-xs uppercase tracking-wide text-zinc-500">Fork Head</p>
-            <p className="mt-2 text-sm font-mono text-zinc-900">{comparison.forkHead.sha.slice(0, 12)}</p>
-            <p className="mt-1 text-sm text-zinc-800">{comparison.forkHead.message}</p>
-            <p className="mt-1 text-xs text-zinc-600">
+        <article className="slb-card">
+          <div className="slb-section-head">
+            <div>
+              <span className="slb-kicker">Fork Head</span>
+              <h3>{comparison.forkHead.sha.slice(0, 12)}</h3>
+            </div>
+          </div>
+          <div className="slb-card-body slb-stack">
+            <p>{comparison.forkHead.message}</p>
+            <p className="slb-note">
               {comparison.forkHead.authorName} • {new Date(comparison.forkHead.committedDate).toLocaleString()}
             </p>
-            <a
-              href={comparison.forkHead.commitUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-2 inline-flex text-xs font-medium underline"
-            >
-              View fork head commit
+            <a href={comparison.forkHead.commitUrl} target="_blank" rel="noopener noreferrer" className="slb-link-arrow">
+              View Fork Head Commit ->
             </a>
+          </div>
+        </article>
+      </section>
+
+      {comparison.diffUnavailable ? (
+        <section className="slb-alert slb-alert--warn">
+          <p>{comparison.diffUnavailableReason ?? "GitHub could not generate the diff for this comparison."}</p>
+          <p style={{ marginTop: "8px" }}>
+            This is a GitHub API limitation for this comparison range. Estimated commit distance and recent unique
+            commits are shown below.
+          </p>
+          <div className="slb-action-row" style={{ marginTop: "12px" }}>
+            <a href={comparison.compareUrl} target="_blank" rel="noopener noreferrer" className="slb-link-arrow">
+              Open Comparison On GitHub ->
+            </a>
+          </div>
+        </section>
+      ) : null}
+
+      {comparison.diffUnavailable ? (
+        <section className="slb-grid-2">
+          <article className="slb-card">
+            <div className="slb-section-head">
+              <div>
+                <span className="slb-kicker">Estimated Distance</span>
+                <h3>Recent Fork-Only Commits</h3>
+              </div>
+            </div>
+            <div className="slb-card-body">
+              {comparison.forkUniqueCommits.length === 0 ? (
+                <p className="slb-body-copy">No fork-only commits found in scanned history.</p>
+              ) : (
+                <div className="slb-stack">
+                  {comparison.forkUniqueCommits.map((commit) => (
+                    <div key={commit.sha} className="slb-inset-card">
+                      <a href={commit.commitUrl} target="_blank" rel="noopener noreferrer" className="slb-link-arrow">
+                        {commit.sha.slice(0, 10)} ->
+                      </a>
+                      <p style={{ marginTop: "8px" }}>{commit.message}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </article>
+
+          <article className="slb-card">
+            <div className="slb-section-head">
+              <div>
+                <span className="slb-kicker">Estimated Distance</span>
+                <h3>Recent Upstream-Only Commits</h3>
+              </div>
+            </div>
+            <div className="slb-card-body">
+              {comparison.upstreamUniqueCommits.length === 0 ? (
+                <p className="slb-body-copy">No upstream-only commits found in scanned history.</p>
+              ) : (
+                <div className="slb-stack">
+                  {comparison.upstreamUniqueCommits.map((commit) => (
+                    <div key={commit.sha} className="slb-inset-card">
+                      <a href={commit.commitUrl} target="_blank" rel="noopener noreferrer" className="slb-link-arrow">
+                        {commit.sha.slice(0, 10)} ->
+                      </a>
+                      <p style={{ marginTop: "8px" }}>{commit.message}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </article>
         </section>
+      ) : null}
 
-        {comparison.diffUnavailable ? (
-          <section className="grid gap-4 md:grid-cols-2">
-            <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <h3 className="text-sm font-semibold text-zinc-800">Recent Fork-Only Commits</h3>
-              {comparison.forkUniqueCommits.length === 0 ? (
-                <p className="mt-2 text-sm text-zinc-600">No fork-only commits found in scanned history.</p>
-              ) : (
-                <ul className="mt-2 space-y-2">
-                  {comparison.forkUniqueCommits.map((commit) => (
-                    <li key={commit.sha} className="text-sm">
-                      <a href={commit.commitUrl} target="_blank" rel="noopener noreferrer" className="underline">
-                        {commit.sha.slice(0, 10)}
-                      </a>
-                      <span className="ml-2 text-zinc-700">{commit.message}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </article>
-
-            <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-              <h3 className="text-sm font-semibold text-zinc-800">Recent Upstream-Only Commits</h3>
-              {comparison.upstreamUniqueCommits.length === 0 ? (
-                <p className="mt-2 text-sm text-zinc-600">No upstream-only commits found in scanned history.</p>
-              ) : (
-                <ul className="mt-2 space-y-2">
-                  {comparison.upstreamUniqueCommits.map((commit) => (
-                    <li key={commit.sha} className="text-sm">
-                      <a href={commit.commitUrl} target="_blank" rel="noopener noreferrer" className="underline">
-                        {commit.sha.slice(0, 10)}
-                      </a>
-                      <span className="ml-2 text-zinc-700">{commit.message}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </article>
-          </section>
-        ) : null}
-
-        {comparison.files.length > 0 ? (
-          <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-            <h2 className="text-lg font-semibold">Changed Files</h2>
-            <ul className="mt-4 space-y-4">
-              {comparison.files.map((file) => (
-                <li key={file.filename} className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
-                  <div className="flex flex-wrap items-center gap-3 text-sm">
-                    <span className="rounded bg-zinc-200 px-2 py-0.5 font-mono text-xs uppercase text-zinc-700">
-                      {file.status}
-                    </span>
-                    <span className="font-mono text-zinc-900">{file.filename}</span>
-                    <span className="text-green-700">+{file.additions}</span>
-                    <span className="text-red-700">-{file.deletions}</span>
-                    <span className="text-zinc-700">{file.changes} changes</span>
-                  </div>
-                  {file.patch ? (
-                    <pre className="mt-3 overflow-x-auto rounded-md border border-zinc-200 bg-white p-3 text-xs leading-5 text-zinc-800">
-                      {file.patch}
-                    </pre>
-                  ) : (
-                    <p className="mt-3 text-xs text-zinc-500">No patch text available for this file.</p>
-                  )}
-                </li>
-              ))}
-            </ul>
-          </section>
-        ) : null}
-      </main>
+      {comparison.files.length > 0 ? (
+        <section className="slb-card">
+          <div className="slb-section-head">
+            <div>
+              <span className="slb-kicker">Changed Files</span>
+              <h2>Patch Review</h2>
+            </div>
+          </div>
+          <div className="slb-card-body slb-stack">
+            {comparison.files.map((file) => (
+              <article key={file.filename} className="slb-inset-card">
+                <div className="slb-inline-meta">
+                  <span className="slb-pill">{file.status}</span>
+                  <span className="slb-mono">{file.filename}</span>
+                  <span className="slb-note">+{file.additions}</span>
+                  <span className="slb-note">-{file.deletions}</span>
+                  <span className="slb-note">{file.changes} changes</span>
+                </div>
+                {file.patch ? (
+                  <pre className="slb-pre" style={{ marginTop: "12px" }}>
+                    {file.patch}
+                  </pre>
+                ) : (
+                  <p className="slb-note" style={{ marginTop: "12px" }}>
+                    No patch text available for this file.
+                  </p>
+                )}
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

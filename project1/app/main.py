@@ -1,7 +1,7 @@
 import os
 import sys
 
-# Make sure the project root is importable when running as `python app/main.py`
+# Make sure the project root is importable when running as `python3 app/main.py`
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app.api.routes import create_app

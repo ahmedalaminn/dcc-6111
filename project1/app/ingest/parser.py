@@ -58,8 +58,8 @@ def parse_binary(filepath, max_samples=None):
         return _parse_wave_v1(filepath, max_samples=max_samples)
 
     raise ValueError(
-        f"'{os.path.basename(filepath)}' has no WAVE header — "
-        "looks like a raw ADC capture. Use parse_raw_uint8() instead."
+        f"Bad magic bytes {magic!r} in '{os.path.basename(filepath)}' — "
+        "expected b'WAVE'. If this is a raw ADC capture, use parse_raw_uint8() instead."
     )
 
 

@@ -94,6 +94,14 @@ def test_noisy_signal_rmse():
     assert 0 < rmse < 0.5
 
 
+def test_large_signal_alignment_path():
+    s = sine_wave(freq=7.0, sample_rate=1000.0, duration=60.0)
+    rmse, corr, lag = compare_signals(s, s)
+    assert rmse == pytest.approx(0.0, abs=1e-6)
+    assert corr == pytest.approx(1.0, abs=1e-4)
+    assert lag == 0
+
+
 # ---------------------------------------------------------------------------
 # detect_degradation
 # ---------------------------------------------------------------------------

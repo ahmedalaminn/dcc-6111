@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from "react";
 
 interface Node {
   id: string;
-  status: 'connected' | 'disconnected';
+  status: "connected" | "disconnected";
   isLocal: boolean;
 }
 
@@ -16,62 +16,61 @@ export default function App() {
   const [diagnosticLoggingEnabled, setDiagnosticLoggingEnabled] = useState(true);
   const [nodes, setNodes] = useState<Node[]>([]);
   const [logMessages, setLogMessages] = useState<LogMessage[]>([]);
-  
-  // Array state for multiple node selections
   const [selectedNodeIds, setSelectedNodeIds] = useState<string[]>([]);
 
   const logContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-      const container = logContainerRef.current;
-      if (!container) return;
+    const container = logContainerRef.current;
+    if (!container) {
+      return;
+    }
 
-      const threshold = 50;
-      const isAtBottom = 
-        container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
+    const threshold = 56;
+    const isAtBottom = container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
 
-      if (isAtBottom) {
-        container.scrollTop = container.scrollHeight;
-      }
-    }, [logMessages]);
+    if (isAtBottom) {
+      container.scrollTop = container.scrollHeight;
+    }
+  }, [logMessages]);
 
   useEffect(() => {
-    const eventSource = new EventSource('http://localhost:5000/stream');
+    const eventSource = new EventSource("http://localhost:5000/stream");
 
-    eventSource.addEventListener('logging_toggle', (event) => {
+    eventSource.addEventListener("logging_toggle", (event) => {
       const data = JSON.parse(event.data);
       setDiagnosticLoggingEnabled(data.enabled);
     });
 
-    eventSource.addEventListener('node_status', (event) => {
+    eventSource.addEventListener("node_status", (event) => {
       const data = JSON.parse(event.data);
-      const mappedStatus = data.status === 'ok' ? 'connected' : 'disconnected';
+      const mappedStatus = data.status === "ok" ? "connected" : "disconnected";
 
       setNodes((prevNodes) => {
-        const existingIndex = prevNodes.findIndex((n) => n.id === data.node_id);
+        const existingIndex = prevNodes.findIndex((node) => node.id === data.node_id);
         if (existingIndex >= 0) {
-          const newNodes = [...prevNodes];
-          newNodes[existingIndex].status = mappedStatus;
-          return newNodes;
+          const next = [...prevNodes];
+          next[existingIndex].status = mappedStatus;
+          return next;
         }
         return [...prevNodes, { id: data.node_id, status: mappedStatus, isLocal: false }];
       });
     });
 
-    eventSource.addEventListener('log', (event) => {
+    eventSource.addEventListener("log", (event) => {
       const data = JSON.parse(event.data);
-      const newMessage: LogMessage = {
+      const nextMessage: LogMessage = {
         timestamp: data.ts,
         producerId: data.node_id,
         payload: data.payload,
       };
-      
-      setLogMessages((prev) => [...prev, newMessage]);
+
+      setLogMessages((prev) => [...prev, nextMessage]);
 
       setNodes((prevNodes) => {
-        const existingIndex = prevNodes.findIndex((n) => n.id === data.node_id);
+        const existingIndex = prevNodes.findIndex((node) => node.id === data.node_id);
         if (existingIndex < 0) {
-          return [...prevNodes, { id: data.node_id, status: 'connected', isLocal: false }];
+          return [...prevNodes, { id: data.node_id, status: "connected", isLocal: false }];
         }
         return prevNodes;
       });
@@ -80,188 +79,228 @@ export default function App() {
     return () => eventSource.close();
   }, []);
 
-  const toggleDiagnosticLogging = async () => {
-    const newState = !diagnosticLoggingEnabled;
+  async function toggleDiagnosticLogging() {
+    const nextState = !diagnosticLoggingEnabled;
     try {
-      const response = await fetch('http://localhost:5000/toggle', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ enabled: newState }),
+      const response = await fetch("http://localhost:5000/toggle", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: nextState }),
       });
       if (response.ok) {
-        setDiagnosticLoggingEnabled(newState);
+        setDiagnosticLoggingEnabled(nextState);
       }
     } catch (error) {
       console.error("Failed to toggle logging:", error);
     }
-  };
+  }
 
-  // Toggle individual node selection
-  const toggleNodeSelection = (nodeId: string) => {
-    setSelectedNodeIds((prev) => 
-      prev.includes(nodeId)
-        ? prev.filter((id) => id !== nodeId)
-        : [...prev, nodeId]
+  function toggleNodeSelection(nodeId: string) {
+    setSelectedNodeIds((prev) =>
+      prev.includes(nodeId) ? prev.filter((id) => id !== nodeId) : [...prev, nodeId],
     );
-  };
+  }
 
-  // Filter logs against array
-  const displayedLogs = selectedNodeIds.length > 0 
-    ? logMessages.filter((msg) => selectedNodeIds.includes(msg.producerId))
-    : logMessages;
+  const displayedLogs =
+    selectedNodeIds.length > 0
+      ? logMessages.filter((message) => selectedNodeIds.includes(message.producerId))
+      : logMessages;
+
+  const activeNodes = nodes.filter((node) => node.status === "connected").length;
 
   return (
-    <div className="size-full bg-white p-8">
-      <div className="max-w-7xl mx-auto">
-        <div className="mb-8 pb-6 border-b-2 border-gray-300">
-          <h1 className="text-3xl font-mono mb-6">DISTRIBUTED PUBSUB NETWORK LOGGER</h1>
-          
-          <div className="flex items-center gap-4 p-4 border-2 border-gray-400 bg-gray-50">
-            <label htmlFor="diagnostic-toggle" className="font-mono font-semibold text-lg">
-              DIAGNOSTIC LOGGING:
-            </label>
-            <button
-              id="diagnostic-toggle"
-              onClick={toggleDiagnosticLogging}
-              className={`relative w-16 h-8 border-2 border-gray-800 transition-colors cursor-pointer ${
-                diagnosticLoggingEnabled ? 'bg-gray-800' : 'bg-white'
-              }`}
-              aria-pressed={diagnosticLoggingEnabled}
-            >
-              <div
-                className={`absolute top-0.5 w-6 h-6 border-2 border-gray-800 transition-transform ${
-                  diagnosticLoggingEnabled ? 'translate-x-8 bg-white' : 'translate-x-0.5 bg-gray-800'
-                }`}
-              />
-            </button>
-            <span className="font-mono font-semibold">
-              {diagnosticLoggingEnabled ? 'ENABLED' : 'DISABLED'}
-            </span>
+    <div className="min-h-screen bg-[#eef1f6] text-[#091426]">
+      <header className="bg-[#0014dc] text-white">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-end justify-between gap-6 px-6 py-5 lg:px-8">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.24em] text-white/70">SLB Internal Tool Suite</p>
+            <h1 className="mt-1 text-4xl font-normal tracking-[-0.05em]">Node Communication Logger</h1>
+          </div>
+          <div className="flex items-center gap-3 text-[11px] uppercase tracking-[0.18em] text-white/80">
+            <span>Project 2</span>
+            <span className="h-4 w-px bg-white/25" />
+            <span>Communication Diagnostics</span>
           </div>
         </div>
+      </header>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-1">
-            <div className="border-2 border-gray-400">
-              <div className="bg-gray-200 border-b-2 border-gray-400 p-4 flex justify-between items-center">
-                <h2 className="font-mono font-semibold text-lg">SECTION 1: NETWORK OVERVIEW</h2>
-                {selectedNodeIds.length > 0 && (
-                  <button 
-                    onClick={() => setSelectedNodeIds([])}
-                    className="text-[10px] bg-gray-800 cursor-pointer text-white px-2 py-1 font-mono uppercase"
-                  >
-                    Clear Filter
-                  </button>
-                )}
-              </div>
-              <div className="p-4">
-                <div className="space-y-3">
-                  {nodes.map((node) => (
-                    <div
-                      key={node.id}
-                      onClick={() => toggleNodeSelection(node.id)}
-                      className={`border-2 p-3 bg-white cursor-pointer transition-all ${
-                        selectedNodeIds.includes(node.id) ? 'border-black ring-2 ring-gray-200' : 'border-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="font-mono text-sm font-semibold">NODE ID:</div>
-                        {node.isLocal && (
-                          <div className="px-2 py-1 border-2 border-gray-800 bg-gray-800 text-white text-xs font-mono font-semibold">
-                            LOCAL
-                          </div>
-                        )}
-                      </div>
-                      <div className="font-mono text-sm mb-2 break-all">{node.id}</div>
-                      <div className="flex items-center gap-2">
-                        <div className="font-mono text-xs font-semibold">STATUS:</div>
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`w-3 h-3 border-2 ${
-                              node.status === 'connected'
-                                ? 'bg-gray-800 border-gray-800'
-                                : 'bg-white border-gray-400'
-                            }`}
-                          />
-                          <span className="font-mono text-xs">
-                            {node.status.toUpperCase()}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 border-2 border-gray-400 bg-gray-50 p-4">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`w-4 h-4 border-2 border-gray-800 ${
-                    diagnosticLoggingEnabled ? 'bg-gray-800 animate-pulse' : 'bg-white'
-                  }`}
-                />
-                <div className="font-mono text-sm font-semibold">
-                  LOCAL NODE ACTIVITY: {diagnosticLoggingEnabled ? 'ACTIVE' : 'IDLE'}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="lg:col-span-2">
-            <div className="border-2 border-gray-400 h-[600px] flex flex-col relative">
-              <div className="bg-gray-200 border-b-2 border-gray-400 p-4 flex justify-between items-center">
-                <h2 className="font-mono font-semibold text-lg">SECTION 2: LIVE DIAGNOSTIC LOG</h2>
-                {selectedNodeIds.length > 0 && (
-                  <span className="font-mono text-xs bg-white border border-gray-400 px-2 py-1 truncate max-w-[50%]">
-                    FILTERING: {selectedNodeIds.join(', ')}
-                  </span>
-                )}
-              </div>
-              
-              <div className="flex-1 overflow-auto" ref={logContainerRef}>
-                <table className="w-full border-collapse font-mono text-sm">
-                  <thead className="sticky top-0 bg-gray-100 border-b-2 border-gray-400">
-                    <tr>
-                      <th className="text-left p-3 border-r-2 border-gray-300 font-semibold">TIMESTAMP</th>
-                      <th className="text-left p-3 border-r-2 border-gray-300 font-semibold">PRODUCER ID</th>
-                      <th className="text-left p-3 font-semibold">PAYLOAD (PROTOBUF DATA)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {displayedLogs.map((message, index) => (
-                      <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
-                        <td className="p-3 border-r border-gray-200 whitespace-nowrap">{message.timestamp}</td>
-                        <td className="p-3 border-r border-gray-200">{message.producerId}</td>
-                        <td className="p-3 text-xs break-all">{message.payload}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {!diagnosticLoggingEnabled && (
-                <div className="absolute inset-0 bg-white/80 flex items-center justify-center pointer-events-none z-10">
-                  <div className="border-2 border-gray-400 bg-white p-6 text-center shadow-lg">
-                    <div className="font-mono font-semibold">LOGGING DISABLED</div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="mt-4 border-2 border-gray-300 bg-gray-50 p-3 flex justify-between">
-              <div className="font-mono text-xs">
-                TOTAL MESSAGES: {logMessages.length}
-              </div>
-              {selectedNodeIds.length > 0 && (
-                <div className="font-mono text-xs">
-                  MATCHING FILTER: {displayedLogs.length}
-                </div>
-              )}
-            </div>
-          </div>
+      <div className="border-b border-[#d7dce6] bg-white">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-6 py-4 text-[11px] uppercase tracking-[0.18em] text-[#667085] lg:px-8">
+          <span>Network Overview</span>
+          <span className="font-bold text-[#0014dc]">-&gt;</span>
+          <span>Live Diagnostics</span>
+          <span className="font-bold text-[#0014dc]">-&gt;</span>
+          <span>Node-Level Filtering</span>
         </div>
       </div>
+
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-6 lg:px-8">
+        <section className="grid gap-4 md:grid-cols-4">
+          <article className="border border-[#d7dce6] bg-white p-4 shadow-[0_20px_40px_rgba(0,20,220,0.05)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0014dc]">Nodes Seen</p>
+            <p className="mt-3 text-3xl font-normal tracking-[-0.04em]">{nodes.length}</p>
+          </article>
+          <article className="border border-[#d7dce6] bg-white p-4 shadow-[0_20px_40px_rgba(0,20,220,0.05)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0014dc]">Active Nodes</p>
+            <p className="mt-3 text-3xl font-normal tracking-[-0.04em]">{activeNodes}</p>
+          </article>
+          <article className="border border-[#d7dce6] bg-white p-4 shadow-[0_20px_40px_rgba(0,20,220,0.05)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0014dc]">Messages Buffered</p>
+            <p className="mt-3 text-3xl font-normal tracking-[-0.04em]">{logMessages.length}</p>
+          </article>
+          <article className="border border-[#d7dce6] bg-white p-4 shadow-[0_20px_40px_rgba(0,20,220,0.05)]">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0014dc]">Visible Records</p>
+            <p className="mt-3 text-3xl font-normal tracking-[-0.04em]">{displayedLogs.length}</p>
+          </article>
+        </section>
+
+        <section className="border border-[#d7dce6] bg-white shadow-[0_20px_40px_rgba(0,20,220,0.05)]">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#d7dce6] bg-[#f6f8fb] px-5 py-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0014dc]">Control Rail</p>
+              <h2 className="mt-1 text-2xl font-normal tracking-[-0.04em]">Diagnostic Logging</h2>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-[11px] uppercase tracking-[0.16em] text-[#667085]">
+                State: {diagnosticLoggingEnabled ? "ON" : "OFF"}
+              </span>
+              <button
+                type="button"
+                onClick={toggleDiagnosticLogging}
+                className={`border px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.16em] transition ${
+                  diagnosticLoggingEnabled
+                    ? "border-[#0014dc] bg-[#0014dc] text-white hover:bg-[#0010b6]"
+                    : "border-[#bcc5d3] bg-white text-[#091426] hover:border-[#0014dc] hover:text-[#0014dc]"
+                }`}
+                aria-pressed={diagnosticLoggingEnabled}
+              >
+                {diagnosticLoggingEnabled ? "Disable Logging ->" : "Enable Logging ->"}
+              </button>
+            </div>
+          </div>
+          <div className="grid gap-6 p-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+            <section className="border border-[#d7dce6] bg-white">
+              <div className="border-b border-[#d7dce6] bg-[#f6f8fb] px-4 py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0014dc]">Section 1</p>
+                    <h3 className="mt-1 text-xl font-normal tracking-[-0.04em]">Network Overview</h3>
+                  </div>
+                  {selectedNodeIds.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedNodeIds([])}
+                      className="border border-[#bcc5d3] bg-white px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-[#091426] transition hover:border-[#0014dc] hover:text-[#0014dc]"
+                    >
+                      {"Clear Filter ->"}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+              <div className="space-y-3 p-4">
+                {nodes.length === 0 ? (
+                  <div className="border border-dashed border-[#d7dce6] bg-[#f6f8fb] px-4 py-8 text-sm text-[#667085]">
+                    No nodes seen yet.
+                  </div>
+                ) : null}
+                {nodes.map((node) => (
+                  <button
+                    type="button"
+                    key={node.id}
+                    onClick={() => toggleNodeSelection(node.id)}
+                    className={`block w-full border p-4 text-left transition ${
+                      selectedNodeIds.includes(node.id)
+                        ? "border-[#0014dc] bg-[#eef2ff] shadow-[inset_3px_0_0_0_#0014dc]"
+                        : "border-[#d7dce6] bg-white hover:border-[#0014dc] hover:bg-[#f6f8fb]"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-4">
+                      <span className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#667085]">Node ID</span>
+                      <span
+                        className={`text-[11px] font-semibold uppercase tracking-[0.16em] ${
+                          node.status === "connected" ? "text-[#0014dc]" : "text-[#b42318]"
+                        }`}
+                      >
+                        {node.status}
+                      </span>
+                    </div>
+                    <div className="mt-3 break-all font-mono text-sm text-[#091426]">{node.id}</div>
+                    <div className="mt-4 flex items-center gap-2 text-[11px] uppercase tracking-[0.16em] text-[#667085]">
+                      <span
+                        className={`h-2.5 w-2.5 ${
+                          node.status === "connected" ? "bg-[#0014dc]" : "bg-[#b42318]"
+                        }`}
+                      />
+                      <span>{selectedNodeIds.includes(node.id) ? "Filter Active" : "Available for Filter"}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </section>
+
+            <section className="border border-[#d7dce6] bg-white">
+              <div className="border-b border-[#d7dce6] bg-[#f6f8fb] px-4 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0014dc]">Section 2</p>
+                    <h3 className="mt-1 text-xl font-normal tracking-[-0.04em]">Live Diagnostic Log</h3>
+                  </div>
+                  {selectedNodeIds.length > 0 ? (
+                    <div className="max-w-full border border-[#d7dce6] bg-white px-3 py-2 text-[11px] uppercase tracking-[0.16em] text-[#667085]">
+                      Filtering: {selectedNodeIds.join(", ")}
+                    </div>
+                  ) : (
+                    <div className="text-[11px] uppercase tracking-[0.16em] text-[#667085]">All nodes visible</div>
+                  )}
+                </div>
+              </div>
+
+              <div className="relative h-[620px] overflow-hidden">
+                <div className="h-full overflow-auto" ref={logContainerRef}>
+                  <table className="w-full border-collapse text-sm">
+                    <thead className="sticky top-0 z-10 border-b border-[#d7dce6] bg-white">
+                      <tr className="text-left text-[11px] uppercase tracking-[0.16em] text-[#667085]">
+                        <th className="border-r border-[#e6ebf2] px-4 py-3 font-semibold">Timestamp</th>
+                        <th className="border-r border-[#e6ebf2] px-4 py-3 font-semibold">Producer ID</th>
+                        <th className="px-4 py-3 font-semibold">Payload</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {displayedLogs.length === 0 ? (
+                        <tr>
+                          <td colSpan={3} className="px-4 py-10 text-center text-sm text-[#667085]">
+                            No diagnostic messages available for the current filter.
+                          </td>
+                        </tr>
+                      ) : null}
+                      {displayedLogs.map((message, index) => (
+                        <tr key={`${message.producerId}-${message.timestamp}-${index}`} className="border-b border-[#edf1f6]">
+                          <td className="border-r border-[#edf1f6] px-4 py-3 font-mono text-xs text-[#667085]">
+                            {message.timestamp}
+                          </td>
+                          <td className="border-r border-[#edf1f6] px-4 py-3 font-mono text-xs text-[#0014dc]">
+                            {message.producerId}
+                          </td>
+                          <td className="px-4 py-3 text-sm text-[#091426]">{message.payload}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {!diagnosticLoggingEnabled ? (
+                  <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/88">
+                    <div className="border border-[#0014dc] bg-white px-8 py-6 text-center shadow-[0_24px_40px_rgba(0,20,220,0.08)]">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-[#0014dc]">Logging Disabled</p>
+                      <p className="mt-2 text-sm text-[#667085]">Re-enable logging to resume live diagnostic capture.</p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </section>
+          </div>
+        </section>
+      </main>
     </div>
   );
 }

@@ -198,6 +198,17 @@ waveform-monitor/
 - Python 3.10+
 - pip
 
+### BeagleBone Black target notes
+
+The copied `temp_slb_suite/project1` version is trimmed for the BBB:
+
+- runtime dependencies are only `Flask`, `NumPy`, and `Jinja2`
+- SciPy was removed to avoid heavy ARM builds and extra RAM pressure
+- comparison alignment uses a NumPy FFT implementation with a 50k-sample cap
+- FFT analysis is capped at 131072 samples by default
+- nonessential generated data under `data/metrics`, `data/comparisons`, and `data/reports` can be recreated on-device
+- the demo dataset can be reduced to the compact `sourceA` and `sourceB` capture sets for on-device demos
+
 ## Setup
 
 Clone the repository:
@@ -214,10 +225,23 @@ python3 -m venv venv
 source venv/bin/activate
 ```
 
-Install dependencies:
+Install runtime dependencies:
 
 ```bash
 pip install -r requirements.txt
+```
+
+For a BeagleBone Black install path that avoids compiling NumPy on-device:
+
+```bash
+chmod +x scripts/setup_bbb.sh
+./scripts/setup_bbb.sh
+```
+
+For local testing/dev tools:
+
+```bash
+pip install -r requirements-dev.txt
 ```
 
 ---
@@ -227,7 +251,7 @@ pip install -r requirements.txt
 Start the microservice:
 
 ```bash
-python app/main.py
+./run_bbb.sh
 ```
 
 Once started, the web interface will be available at:

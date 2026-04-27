@@ -56,12 +56,39 @@ function displayNumber(value: number | null) {
 
 function classificationBadgeClass(value: "Small change" | "Moderate change" | "Large divergence") {
   if (value === "Small change") {
-    return "bg-emerald-100 text-emerald-800";
+    return "slb-badge slb-badge--ok";
   }
   if (value === "Moderate change") {
-    return "bg-amber-100 text-amber-800";
+    return "slb-badge slb-badge--warn";
   }
-  return "bg-red-100 text-red-800";
+  return "slb-badge slb-badge--danger";
+}
+
+function AuthCard({
+  title,
+  body,
+  href,
+  action,
+}: {
+  title: string;
+  body: string;
+  href: string;
+  action: string;
+}) {
+  return (
+    <div className="slb-auth-shell">
+      <main className="slb-auth-card">
+        <span className="slb-kicker">Project Scan</span>
+        <h1>{title}</h1>
+        <p>{body}</p>
+        <div className="slb-action-row" style={{ marginTop: "20px" }}>
+          <Link href={href} className="slb-button">
+            {action}
+          </Link>
+        </div>
+      </main>
+    </div>
+  );
 }
 
 export default async function ScanPage({ searchParams }: ScanPageProps) {
@@ -69,45 +96,29 @@ export default async function ScanPage({ searchParams }: ScanPageProps) {
 
   if (!session) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-6 py-12 text-zinc-900">
-        <main className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-semibold tracking-tight">Project Scan</h1>
-          <p className="mt-4 text-sm text-zinc-700">You are not signed in.</p>
-          <div className="mt-6">
-            <Link
-              href="/api/auth/signin/github"
-              className="inline-flex rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
-            >
-              Sign in with GitHub
-            </Link>
-          </div>
-        </main>
-      </div>
+      <AuthCard
+        title="Sign In Required"
+        body="Authentication is required before running project-level fork analysis."
+        href="/api/auth/signin/github"
+        action="Sign In With GitHub ->"
+      />
     );
   }
 
   if (!session.accessToken) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-zinc-100 px-6 py-12 text-zinc-900">
-        <main className="w-full max-w-lg rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-          <h1 className="text-2xl font-semibold tracking-tight">Project Scan</h1>
-          <p className="mt-4 text-sm text-zinc-700">Missing GitHub access token. Sign out and sign in again.</p>
-          <div className="mt-6">
-            <Link
-              href="/api/auth/signout"
-              className="inline-flex rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-zinc-700"
-            >
-              Sign out
-            </Link>
-          </div>
-        </main>
-      </div>
+      <AuthCard
+        title="Access Token Required"
+        body="The GitHub access token is missing from the current session. Sign out and sign in again."
+        href="/api/auth/signout"
+        action="Sign Out ->"
+      />
     );
   }
 
-  let projectAnalysis: ProjectForkAnalysis | null = null;
   let analysisError: string | null = null;
   let repoOptions: Array<{ id: number; fullName: string; forksCount: number }> = [];
+  let projectAnalysis: ProjectForkAnalysis | null = null;
 
   const query = (await searchParams) ?? {};
   const persisted = session.scanPreferences;
@@ -161,16 +172,21 @@ export default async function ScanPage({ searchParams }: ScanPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-100 px-6 py-10 text-zinc-900">
-      <main className="mx-auto w-full max-w-5xl space-y-6">
-        <section className="rounded-2xl border border-zinc-200 bg-white p-8 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">Project Scan</h1>
-            <Link href="/" className="text-sm text-zinc-700 underline">
-              Back to repositories
-            </Link>
+    <div className="slb-page">
+      <section className="slb-card">
+        <div className="slb-section-head">
+          <div>
+            <span className="slb-kicker">Scan Workspace</span>
+            <h1>Project Fork Analysis</h1>
           </div>
-
+          <Link href="/" className="slb-button-secondary">
+            Back To Repositories ->
+          </Link>
+        </div>
+        <div className="slb-card-body slb-stack">
+          <p className="slb-body-copy">
+            Configure repository scope, scan depth, and lag policy before running the SLB fork-monitoring analysis.
+          </p>
           <ScanControls
             selectedScanMode={selectedScanMode}
             selectedCustomCommitDepth={customCommitDepth}
@@ -180,133 +196,147 @@ export default async function ScanPage({ searchParams }: ScanPageProps) {
             repoOptions={repoOptions}
             targetPath="/scan"
           />
-        </section>
+        </div>
+      </section>
 
-        {selectedScanMode ? null : (
-          <section className="rounded-2xl border border-amber-300 bg-amber-50 p-6 text-sm text-amber-900 shadow-sm">
-            Select a scan profile, then run the scan.
+      {!selectedScanMode ? (
+        <section className="slb-alert slb-alert--warn">Select a scan profile, then run the scan.</section>
+      ) : null}
+
+      {analysisError ? <section className="slb-alert slb-alert--error">{analysisError}</section> : null}
+
+      {projectAnalysis ? (
+        <>
+          <section className="slb-kpi-grid">
+            <article className="slb-kpi">
+              <p className="slb-kpi__label">Scan Mode</p>
+              <p className="slb-kpi__value" style={{ textTransform: "capitalize" }}>{projectAnalysis.scanMode}</p>
+              <p className="slb-kpi__note">Depth: {projectAnalysis.commitDepth} commits</p>
+            </article>
+            <article className="slb-kpi">
+              <p className="slb-kpi__label">Repositories</p>
+              <p className="slb-kpi__value">{projectAnalysis.totalRepos}</p>
+              <p className="slb-kpi__note">Lag mode: {projectAnalysis.lagThresholdMode}</p>
+            </article>
+            <article className="slb-kpi">
+              <p className="slb-kpi__label">Forks Analyzed</p>
+              <p className="slb-kpi__value">
+                {projectAnalysis.analyzedForks} / {projectAnalysis.totalForksAvailable}
+              </p>
+              <p className="slb-kpi__note">Forks completed in the current run</p>
+            </article>
+            <article className="slb-kpi">
+              <p className="slb-kpi__label">Lagging Forks</p>
+              <p className="slb-kpi__value">{projectAnalysis.laggingForks}</p>
+              <p className="slb-kpi__note">
+                {projectAnalysis.laggingForks} of {projectAnalysis.analyzedForks} forks are marked as lagging.
+              </p>
+            </article>
           </section>
-        )}
 
-        {analysisError ? (
-          <section className="rounded-2xl border border-red-200 bg-white p-6 text-sm text-red-700 shadow-sm">
-            {analysisError}
-          </section>
-        ) : null}
-
-        {projectAnalysis ? (
-          <>
-            <section className="grid gap-4 md:grid-cols-4">
-              <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Scan Mode</p>
-                <p className="mt-2 text-lg font-semibold capitalize">{projectAnalysis.scanMode}</p>
-                <p className="text-xs text-zinc-600">Depth: {projectAnalysis.commitDepth} commits</p>
-              </article>
-              <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Repositories</p>
-                <p className="mt-2 text-lg font-semibold">{projectAnalysis.totalRepos}</p>
-              </article>
-              <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Forks Analyzed</p>
-                <p className="mt-2 text-lg font-semibold">
-                  {projectAnalysis.analyzedForks} / {projectAnalysis.totalForksAvailable}
-                </p>
-              </article>
-              <article className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm">
-                <p className="text-xs uppercase tracking-wide text-zinc-500">Lagging Forks</p>
-                <p className="mt-2 text-lg font-semibold">{projectAnalysis.laggingForks}</p>
-                <p className="text-xs text-zinc-600">
-                  {projectAnalysis.laggingForks} of {projectAnalysis.analyzedForks} forks are marked as Lagging.
-                </p>
-              </article>
-            </section>
-
-            <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-semibold">Framework Adoption</h2>
+          <section className="slb-card">
+            <div className="slb-section-head">
+              <div>
+                <span className="slb-kicker">Framework Signals</span>
+                <h2>Framework Adoption</h2>
+              </div>
+            </div>
+            <div className="slb-card-body">
               {projectAnalysis.frameworkAdoption.length === 0 ? (
-                <p className="mt-3 text-sm text-zinc-600">No framework signatures detected in analyzed forks.</p>
+                <p className="slb-body-copy">No framework signatures detected in analyzed forks.</p>
               ) : (
-                <div className="mt-4 overflow-x-auto">
-                  <table className="min-w-full divide-y divide-zinc-200 text-sm">
+                <div className="slb-table-wrap">
+                  <table className="slb-table">
                     <thead>
-                      <tr className="text-left text-zinc-600">
-                        <th className="px-3 py-2 font-medium">Framework</th>
-                        <th className="px-3 py-2 font-medium">Forks Using</th>
-                        <th className="px-3 py-2 font-medium">Upstream Using</th>
-                        <th className="px-3 py-2 font-medium">Fork Coverage</th>
-                        <th className="px-3 py-2 font-medium">Upstream Coverage</th>
-                        <th className="px-3 py-2 font-medium">Weighted Adoption</th>
-                        <th className="px-3 py-2 font-medium">Drift Status</th>
+                      <tr>
+                        <th>Framework</th>
+                        <th>Forks Using</th>
+                        <th>Upstream Using</th>
+                        <th>Fork Coverage</th>
+                        <th>Upstream Coverage</th>
+                        <th>Weighted Adoption</th>
+                        <th>Drift Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-100">
+                    <tbody>
                       {projectAnalysis.frameworkAdoption.map((framework) => (
                         <tr key={framework.framework}>
-                          <td className="px-3 py-2 font-medium text-zinc-800">{framework.framework}</td>
-                          <td className="px-3 py-2 text-zinc-700">{framework.forksUsing}</td>
-                          <td className="px-3 py-2 text-zinc-700">{framework.upstreamUsing}</td>
-                          <td className="px-3 py-2 text-zinc-700">{toPercent(framework.coverageRatio)}</td>
-                          <td className="px-3 py-2 text-zinc-700">{toPercent(framework.upstreamCoverageRatio)}</td>
-                          <td className="px-3 py-2 text-zinc-700">{toPercent(framework.weightedAdoptionScore)}</td>
-                          <td className="px-3 py-2 text-zinc-700">{framework.driftMessage}</td>
+                          <td>{framework.framework}</td>
+                          <td>{framework.forksUsing}</td>
+                          <td>{framework.upstreamUsing}</td>
+                          <td>{toPercent(framework.coverageRatio)}</td>
+                          <td>{toPercent(framework.upstreamCoverageRatio)}</td>
+                          <td>{toPercent(framework.weightedAdoptionScore)}</td>
+                          <td>{framework.driftMessage}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
                 </div>
               )}
-            </section>
+            </div>
+          </section>
 
-            <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-semibold">Fork Alignment Table</h2>
+          <section className="slb-card">
+            <div className="slb-section-head">
+              <div>
+                <span className="slb-kicker">Alignment View</span>
+                <h2>Fork Alignment Table</h2>
+              </div>
+            </div>
+            <div className="slb-card-body">
               {projectAnalysis.forks.length === 0 ? (
-                <p className="mt-3 text-sm text-zinc-600">No fork comparisons were completed in this scan.</p>
+                <p className="slb-body-copy">No fork comparisons were completed in this scan.</p>
               ) : (
-                <div className="mt-4 overflow-x-auto">
-                  <table className="min-w-full divide-y divide-zinc-200 text-sm">
+                <div className="slb-table-wrap">
+                  <table className="slb-table">
                     <thead>
-                      <tr className="text-left text-zinc-600">
-                        <th className="px-3 py-2 font-medium">Fork</th>
-                        <th className="px-3 py-2 font-medium">Behind</th>
-                        <th className="px-3 py-2 font-medium">Ahead</th>
-                        <th className="px-3 py-2 font-medium">No Sync (days)</th>
-                        <th className="px-3 py-2 font-medium">Status</th>
-                        <th className="px-3 py-2 font-medium">Frameworks</th>
-                        <th className="px-3 py-2 font-medium">File Change Summary</th>
+                      <tr>
+                        <th>Fork</th>
+                        <th>Behind</th>
+                        <th>Ahead</th>
+                        <th>No Sync (days)</th>
+                        <th>Status</th>
+                        <th>Frameworks</th>
+                        <th>File Change Summary</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-100">
+                    <tbody>
                       {projectAnalysis.forks.map((fork) => (
                         <tr key={`${fork.upstreamOwner}/${fork.upstreamRepo}:${fork.forkOwner}/${fork.forkRepo}`}>
-                          <td className="px-3 py-2 text-zinc-800">
-                            <div className="font-medium">Parent: {fork.upstreamOwner}/{fork.upstreamRepo}</div>
-                            <div className="text-xs text-zinc-600">Fork: {fork.forkOwner}/{fork.forkRepo}</div>
-                            <Link
-                              href={{
-                                pathname: `/fork/${fork.forkOwner}/${fork.forkRepo}`,
-                                query: {
-                                  upstreamOwner: fork.upstreamOwner,
-                                  upstreamRepo: fork.upstreamRepo,
-                                  upstreamBranch: fork.upstreamBranch,
-                                  forkBranch: fork.forkBranch,
-                                },
-                              }}
-                              className="text-xs text-zinc-600 underline"
-                            >
-                              Open detail view
-                            </Link>
+                          <td>
+                            <div>Parent: {fork.upstreamOwner}/{fork.upstreamRepo}</div>
+                            <div className="slb-note" style={{ marginTop: "4px" }}>
+                              Fork: {fork.forkOwner}/{fork.forkRepo}
+                            </div>
+                            <div style={{ marginTop: "8px" }}>
+                              <Link
+                                href={{
+                                  pathname: `/fork/${fork.forkOwner}/${fork.forkRepo}`,
+                                  query: {
+                                    upstreamOwner: fork.upstreamOwner,
+                                    upstreamRepo: fork.upstreamRepo,
+                                    upstreamBranch: fork.upstreamBranch,
+                                    forkBranch: fork.forkBranch,
+                                  },
+                                }}
+                                className="slb-link-arrow"
+                              >
+                                Open Detail View ->
+                              </Link>
+                            </div>
                           </td>
-                          <td className="px-3 py-2 text-zinc-700">{displayNumber(fork.behindBy)}</td>
-                          <td className="px-3 py-2 text-zinc-700">{displayNumber(fork.aheadBy)}</td>
-                          <td className="px-3 py-2 text-zinc-700">{displayNumber(fork.daysSinceForkSync)}</td>
-                          <td className="px-3 py-2 text-zinc-700">
-                            <div className="font-medium">{fork.status}</div>
-                            <div className="text-xs text-zinc-600">{fork.statusReason}</div>
+                          <td>{displayNumber(fork.behindBy)}</td>
+                          <td>{displayNumber(fork.aheadBy)}</td>
+                          <td>{displayNumber(fork.daysSinceForkSync)}</td>
+                          <td>
+                            <div>{fork.status}</div>
+                            <div className="slb-note" style={{ marginTop: "4px" }}>
+                              {fork.statusReason}
+                            </div>
                           </td>
-                          <td className="px-3 py-2 text-zinc-700">
-                            {fork.frameworkTags.length > 0 ? fork.frameworkTags.join(", ") : "none detected"}
-                          </td>
-                          <td className="px-3 py-2 text-zinc-700">
+                          <td>{fork.frameworkTags.length > 0 ? fork.frameworkTags.join(", ") : "none detected"}</td>
+                          <td>
                             {displayNumber(fork.totalFilesChanged)} files / {displayNumber(fork.totalChanges)} lines
                           </td>
                         </tr>
@@ -315,57 +345,55 @@ export default async function ScanPage({ searchParams }: ScanPageProps) {
                   </table>
                 </div>
               )}
-            </section>
+            </div>
+          </section>
 
-            <section className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
-              <h2 className="text-lg font-semibold">Project File Comparison Summary</h2>
+          <section className="slb-card">
+            <div className="slb-section-head">
+              <div>
+                <span className="slb-kicker">File Divergence</span>
+                <h2>Project File Comparison Summary</h2>
+              </div>
+            </div>
+            <div className="slb-card-body">
               {projectAnalysis.forks.length === 0 ? (
-                <p className="mt-3 text-sm text-zinc-600">No fork comparisons were completed in this scan.</p>
+                <p className="slb-body-copy">No fork comparisons were completed in this scan.</p>
               ) : (
                 <>
-                  <div className="mt-4 overflow-x-auto">
-                    <table className="min-w-full divide-y divide-zinc-200 text-sm">
+                  <div className="slb-table-wrap">
+                    <table className="slb-table">
                       <thead>
-                        <tr className="text-left text-zinc-600">
-                          <th className="px-3 py-2 font-medium">Fork</th>
-                          <th className="px-3 py-2 font-medium">Files Changed</th>
-                          <th className="px-3 py-2 font-medium">Lines Added</th>
-                          <th className="px-3 py-2 font-medium">Lines Removed</th>
-                          <th className="px-3 py-2 font-medium">Classification</th>
-                          <th className="px-3 py-2 font-medium">Notes</th>
+                        <tr>
+                          <th>Fork</th>
+                          <th>Files Changed</th>
+                          <th>Lines Added</th>
+                          <th>Lines Removed</th>
+                          <th>Classification</th>
+                          <th>Notes</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-zinc-100">
+                      <tbody>
                         {projectAnalysis.forks.map((fork) => (
                           <tr key={`summary-${fork.upstreamOwner}/${fork.upstreamRepo}:${fork.forkOwner}/${fork.forkRepo}`}>
-                            <td className="px-3 py-2 text-zinc-800">{fork.forkOwner}/{fork.forkRepo}</td>
-                            <td className="px-3 py-2 text-zinc-700">{displayNumber(fork.totalFilesChanged)}</td>
-                            <td className="px-3 py-2 text-zinc-700">{displayNumber(fork.totalAdditions)}</td>
-                            <td className="px-3 py-2 text-zinc-700">{displayNumber(fork.totalDeletions)}</td>
-                            <td className="px-3 py-2 text-zinc-700">
-                              <span
-                                className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${classificationBadgeClass(
-                                  fork.fileComparisonSize,
-                                )}`}
-                              >
+                            <td>{fork.forkOwner}/{fork.forkRepo}</td>
+                            <td>{displayNumber(fork.totalFilesChanged)}</td>
+                            <td>{displayNumber(fork.totalAdditions)}</td>
+                            <td>{displayNumber(fork.totalDeletions)}</td>
+                            <td>
+                              <span className={classificationBadgeClass(fork.fileComparisonSize)}>
                                 {fork.fileComparisonSize}
                               </span>
                             </td>
-                            <td className="px-3 py-2 text-zinc-700">
+                            <td>
                               {fork.fileComparisonMessage ? <div>{fork.fileComparisonMessage}</div> : null}
-                              {fork.fileComparisonEstimateReason ? (
-                                <div className="text-xs text-zinc-600">{fork.fileComparisonEstimateReason}</div>
-                              ) : (
-                                "Direct diff metrics"
-                              )}
-                              <a
-                                href={fork.compareUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="mt-1 inline-flex text-xs underline"
-                              >
-                                Open GitHub comparison page
-                              </a>
+                              <div className="slb-note" style={{ marginTop: "4px" }}>
+                                {fork.fileComparisonEstimateReason ?? "Direct diff metrics"}
+                              </div>
+                              <div style={{ marginTop: "8px" }}>
+                                <a href={fork.compareUrl} target="_blank" rel="noopener noreferrer" className="slb-link-arrow">
+                                  Open GitHub Comparison ->
+                                </a>
+                              </div>
                             </td>
                           </tr>
                         ))}
@@ -373,17 +401,17 @@ export default async function ScanPage({ searchParams }: ScanPageProps) {
                     </table>
                   </div>
                   {projectAnalysis.forks.some((fork) => fork.isFileComparisonEstimated) ? (
-                    <p className="mt-3 text-sm text-zinc-600">
-                      Detailed diff unavailable due to GitHub API limits. For full comparison, open the GitHub comparison page link in
-                      each row.
+                    <p className="slb-note" style={{ marginTop: "14px" }}>
+                      Detailed diff unavailable due to GitHub API limits. Open the GitHub comparison page link in each
+                      row for the full comparison view.
                     </p>
                   ) : null}
                 </>
               )}
-            </section>
-          </>
-        ) : null}
-      </main>
+            </div>
+          </section>
+        </>
+      ) : null}
     </div>
   );
 }

@@ -5,7 +5,8 @@ import math
 import time
 
 import numpy as np
-from scipy import signal as scipy_signal
+
+from app.config import MAX_ALIGNMENT_SAMPLES, MAX_FFT_SAMPLES
 
 # Cap FFT output at 512 bins — enough frequency resolution for display without bloating responses
 MAX_FFT_POINTS = 512
@@ -38,8 +39,9 @@ def compute_metrics(samples, sample_rate, baseline=None):
         metrics["snr_db"] = None
 
     # FFT — skip DC bin when looking for dominant frequency.
-    # Cap input to avoid blowing RAM on the BBB; 200k samples gives ~1Hz resolution @ 200kHz SR.
-    fft_samples = samples[:200_000] if len(samples) > 200_000 else samples
+    # Keep the input below MAX_FFT_SAMPLES so the BBB does not spend excessive
+    # RAM and CPU on large captures that are already capped elsewhere.
+    fft_samples = samples[:MAX_FFT_SAMPLES] if len(samples) > MAX_FFT_SAMPLES else samples
     n = len(fft_samples)
     fft_vals = np.fft.rfft(fft_samples)
     freqs = np.fft.rfftfreq(n, d=1.0 / sample_rate)
@@ -56,8 +58,6 @@ def compute_metrics(samples, sample_rate, baseline=None):
         metrics["dominant_freq_magnitude"] = 0.0
 
     # Downsample FFT arrays so they don't blow up response payloads.
-    # Use ceil so the output never exceeds MAX_FFT_POINTS (floor can overshoot by
-    # almost 2×: e.g. 2001 bins // 512 = step 3 → 667 returned points).
     if len(freqs) > MAX_FFT_POINTS:
         step = math.ceil(len(freqs) / MAX_FFT_POINTS)
         metrics["fft_freqs"] = freqs[::step].tolist()
@@ -77,16 +77,52 @@ def compute_metrics(samples, sample_rate, baseline=None):
     return metrics
 
 
+def _next_pow2(n):
+    return 1 << (n - 1).bit_length()
+
+
+def _correlate_fft(signal_a, signal_b):
+    # Numpy-only cross-correlation keeps the BBB dependency set small by
+    # avoiding SciPy while still scaling well to tens of thousands of samples.
+    full_len = len(signal_a) + len(signal_b) - 1
+    fft_len = _next_pow2(full_len)
+
+    fft_a = np.fft.rfft(signal_a, fft_len)
+    fft_b = np.fft.rfft(signal_b, fft_len)
+    corr = np.fft.irfft(fft_a * np.conj(fft_b), fft_len)
+
+    # Reorder from circular to linear cross-correlation layout so zero lag lands
+    # at index len(signal_b) - 1, matching numpy/scipy "full" mode semantics.
+    tail_len = len(signal_b) - 1
+    if tail_len <= 0:
+        return corr[:len(signal_a)]
+    return np.concatenate((corr[-tail_len:], corr[:len(signal_a)]))
+
+
 def compare_signals(signal_a, signal_b):
     # Trim both to the shorter length before comparing
     min_len = min(len(signal_a), len(signal_b))
     a = signal_a[:min_len].copy()
     b = signal_b[:min_len].copy()
 
+    # Limit the cross-correlation workload on the BBB. When the signals are
+    # larger than MAX_ALIGNMENT_SAMPLES, compute lag on strided previews and
+    # convert the lag back to the original sample scale.
+    corr_step = 1
+    if min_len > MAX_ALIGNMENT_SAMPLES:
+        corr_step = math.ceil(min_len / MAX_ALIGNMENT_SAMPLES)
+        a_corr = a[::corr_step]
+        b_corr = b[::corr_step]
+    else:
+        a_corr = a
+        b_corr = b
+
     # Cross-correlation to find how many samples one signal leads the other.
     # We subtract the mean first so DC offset doesn't dominate the result.
-    corr_full = scipy_signal.correlate(a - np.mean(a), b - np.mean(b), mode="full")
-    lag = int(np.argmax(np.abs(corr_full))) - (min_len - 1)
+    a_centered = a_corr - np.mean(a_corr)
+    b_centered = b_corr - np.mean(b_corr)
+    corr_full = _correlate_fft(a_centered, b_centered)
+    lag = (int(np.argmax(np.abs(corr_full))) - (len(b_corr) - 1)) * corr_step
 
     # Shift the signals so they line up before computing error metrics
     if lag > 0:

@@ -12,7 +12,7 @@ import tempfile
 
 from flask import Flask, jsonify, render_template, request, send_from_directory
 
-from app.config import COMPARISONS_DIR, DATA_DIR, DEFAULT_SAMPLE_RATE, MAX_FILE_SIZE_MB, METRICS_DIR, RAW_DIR, REPORTS_DIR, STATIC_DIR, TEMPLATES_DIR
+from app.config import COMPARISONS_DIR, DATA_DIR, DEFAULT_SAMPLE_RATE, MAX_COMPARE_SAMPLES, MAX_FILE_SIZE_MB, METRICS_DIR, RAW_DIR, REPORTS_DIR, STATIC_DIR, TEMPLATES_DIR
 from app.core.analyzer import compute_metrics
 from app.core.comparator import compare_waveforms, save_comparison
 from app.ingest.parser import load_waveform, parse_binary, parse_raw_uint8, write_meta
@@ -43,6 +43,28 @@ def _append_metrics_csv(source_id, filename, timestamp_ms, metrics):
         if write_header:
             writer.writeheader()
         writer.writerow(row)
+
+
+def _compute_metrics_history(source_id):
+    source_dir = os.path.join(RAW_DIR, source_id)
+    if not os.path.isdir(source_dir):
+        return []
+
+    rows = []
+    for fname in sorted(os.listdir(source_dir)):
+        if not fname.endswith(".bin"):
+            continue
+        filepath = os.path.join(source_dir, fname)
+        try:
+            wf = load_waveform(filepath)
+            metrics = compute_metrics(wf.samples, wf.sample_rate)
+            row = {k: metrics.get(k) for k in _METRIC_SCALAR_KEYS}
+            row["filename"] = fname
+            row["timestamp_ms"] = wf.timestamp_ms
+            rows.append({k: str(v) if v is not None else "" for k, v in row.items()})
+        except Exception:
+            continue
+    return rows
 
 
 def create_app():
@@ -81,6 +103,7 @@ def create_app():
             return jsonify({"error": "File not found"}), 404
         try:
             wf = load_waveform(filepath)
+            metrics = compute_metrics(wf.samples, wf.sample_rate)
             # Downsample for the response — sending all 60M points would be insane.
             # display_step and display_sample_rate tell the client what rate the
             # preview samples[] are actually at, so time-axis math stays correct.
@@ -101,6 +124,7 @@ def create_app():
                 "display_step": display_step,
                 "display_sample_rate": wf.sample_rate / display_step,
                 "samples": samples.tolist(),
+                "metrics": {k: v for k, v in metrics.items() if not isinstance(v, list)},
             })
         except Exception as e:
             return jsonify({"error": str(e)}), 400
@@ -108,10 +132,11 @@ def create_app():
     @app.route("/api/sources/<source_id>/metrics")
     def get_metrics_history(source_id):
         metrics_file = os.path.join(METRICS_DIR, f"{source_id}_metrics.csv")
-        if not os.path.exists(metrics_file):
-            return jsonify({"source": source_id, "metrics": []})
-        with open(metrics_file, newline="") as f:
-            rows = list(csv.DictReader(f))
+        if os.path.exists(metrics_file):
+            with open(metrics_file, newline="") as f:
+                rows = list(csv.DictReader(f))
+        else:
+            rows = _compute_metrics_history(source_id)
         return jsonify({"source": source_id, "metrics": rows})
 
     # --- Ingest ---
@@ -198,7 +223,7 @@ def create_app():
 
         # Cap at 50k samples — cross-correlation on full 60M-sample files kills the BBB.
         # 50k @ 200kHz = 0.25s of signal, which is plenty for a meaningful comparison.
-        max_samples = int(data.get("max_samples", 50000))
+        max_samples = int(data.get("max_samples", MAX_COMPARE_SAMPLES))
 
         try:
             wf_a = load_waveform(path_a)
@@ -258,6 +283,18 @@ def create_app():
     @app.route("/api/reports/<filename>")
     def get_report(filename):
         return send_from_directory(REPORTS_DIR, filename)
+
+    @app.route("/api/reports/<filename>", methods=["DELETE"])
+    def delete_report(filename):
+        if not filename.endswith(".html"):
+            return jsonify({"error": "Only HTML reports can be deleted"}), 400
+
+        filepath = os.path.join(REPORTS_DIR, filename)
+        if not os.path.exists(filepath):
+            return jsonify({"error": "Report not found"}), 404
+
+        os.remove(filepath)
+        return jsonify({"status": "ok", "deleted": filename})
 
     # --- CLI via web ---
 

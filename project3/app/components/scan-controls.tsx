@@ -83,7 +83,7 @@ export default function ScanControls({
     const customCommitDepth = parseOptionalInt(formData.get("customCommitDepth"));
     const customLagCommitThreshold = parseOptionalInt(formData.get("customLagCommitThreshold"));
     const customLagNoSyncDaysThreshold = parseOptionalInt(formData.get("customLagNoSyncDaysThreshold"));
-    const selectedRepoIds = formData
+    const nextSelectedRepoIds = formData
       .getAll("selectedRepoIds")
       .map((value) => (typeof value === "string" ? Number.parseInt(value, 10) : Number.NaN))
       .filter((value) => Number.isInteger(value) && value > 0);
@@ -113,7 +113,7 @@ export default function ScanControls({
           lagThresholdMode: useCustomLagThresholds ? "custom" : "balanced",
           customLagCommitThreshold: useCustomLagThresholds ? customLagCommitThreshold : undefined,
           customLagNoSyncDaysThreshold: useCustomLagThresholds ? customLagNoSyncDaysThreshold : undefined,
-          selectedRepoIds,
+          selectedRepoIds: nextSelectedRepoIds,
         },
       });
 
@@ -130,7 +130,7 @@ export default function ScanControls({
         params.set("customLagNoSyncDaysThreshold", String(customLagNoSyncDaysThreshold));
       }
 
-      for (const repoId of selectedRepoIds) {
+      for (const repoId of nextSelectedRepoIds) {
         params.append("selectedRepoIds", String(repoId));
       }
 
@@ -144,31 +144,26 @@ export default function ScanControls({
   }
 
   return (
-    <form method="GET" onSubmit={onSubmit} className="mt-6 grid gap-3 rounded-lg border border-zinc-200 bg-zinc-50 p-4 md:grid-cols-4">
+    <form method="GET" onSubmit={onSubmit} className="slb-form-grid">
       {isSubmitting ? (
-        <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-blue-900 md:col-span-4">
-          <div className="flex items-center gap-2">
-            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="12" r="10" className="stroke-blue-200" strokeWidth="4" />
-              <path d="M22 12a10 10 0 0 0-10-10" className="stroke-blue-700" strokeWidth="4" strokeLinecap="round" />
-            </svg>
-            <p className="text-sm font-medium">Scan running...</p>
-            <p className="text-xs text-blue-800">{elapsedSeconds}s elapsed</p>
+        <div className="slb-alert">
+          <div className="slb-inline-meta">
+            <span className="slb-badge slb-badge--ok">Scan Running</span>
+            <span className="slb-note">{elapsedSeconds}s elapsed</span>
           </div>
-          <p className="mt-1 text-xs text-blue-800">Analyzing forks, lag status, framework adoption, and file comparison.</p>
-          <div className="mt-2 h-1.5 w-full overflow-hidden rounded bg-blue-100">
-            <div className="h-full w-2/5 animate-pulse rounded bg-blue-600" />
-          </div>
+          <p className="slb-body-copy" style={{ marginTop: "8px" }}>
+            Analyzing forks, lag status, framework adoption, and file comparison.
+          </p>
         </div>
       ) : null}
 
-      <label className="text-sm text-zinc-700 md:col-span-4">
-        <span className="mb-1 block">Repository scope (only repos with at least one fork)</span>
+      <div className="slb-field">
+        <span>Repository Scope</span>
         <select
           name="selectedRepoIds"
           multiple
           defaultValue={selectedRepoIds.map(String)}
-          className="min-h-36 w-full rounded-md border border-zinc-300 bg-white px-3 py-2"
+          className="slb-multi-select"
           disabled={isSubmitting}
         >
           {repoOptions.map((repo) => (
@@ -177,59 +172,60 @@ export default function ScanControls({
             </option>
           ))}
         </select>
-      </label>
+      </div>
 
-      <label className="text-sm text-zinc-700 md:col-span-2">
-        <span className="mb-1 block">Scan profile</span>
-        <select
-          name="scanMode"
-          defaultValue={selectedScanMode && selectedScanMode !== "custom" ? selectedScanMode : "standard"}
-          className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2"
-          disabled={isSubmitting}
-        >
-          {SCAN_MODE_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label} ({SCAN_PRESET_DEPTHS[option.value]} commits)
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="slb-form-grid slb-form-grid--2">
+        <label className="slb-field">
+          <span>Scan Profile</span>
+          <select
+            name="scanMode"
+            defaultValue={selectedScanMode && selectedScanMode !== "custom" ? selectedScanMode : "standard"}
+            className="slb-select"
+            disabled={isSubmitting}
+          >
+            {SCAN_MODE_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label} ({SCAN_PRESET_DEPTHS[option.value]} commits)
+              </option>
+            ))}
+          </select>
+        </label>
 
-      <button
-        type="submit"
-        className="self-end rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-60 md:col-span-2"
-        disabled={isSubmitting}
-      >
-        {isSubmitting ? "Running scan..." : "Run scan"}
-      </button>
+        <div className="slb-field" style={{ justifyContent: "flex-end" }}>
+          <span>Run Analysis</span>
+          <button type="submit" className="slb-button" disabled={isSubmitting}>
+            {isSubmitting ? "Running Scan..." : "Run Scan ->"}
+          </button>
+        </div>
+      </div>
 
-      <details className="rounded-md border border-zinc-200 bg-white p-3 md:col-span-4">
-        <summary className="cursor-pointer text-sm font-medium text-zinc-800">Advanced Settings</summary>
-        <div className="mt-3 grid gap-3 md:grid-cols-2">
-          <label className="flex items-center gap-2 text-sm text-zinc-700 md:col-span-2">
-            <input
-              type="checkbox"
-              name="useCustomDepth"
-              defaultChecked={typeof selectedCustomCommitDepth === "number"}
-              disabled={isSubmitting}
-            />
-            Use custom scan depth
-          </label>
-          <label className="text-sm text-zinc-700">
-            <span className="mb-1 block">Custom depth</span>
-            <input
-              type="number"
-              name="customCommitDepth"
-              min={20}
-              max={1000}
-              defaultValue={selectedCustomCommitDepth ?? ""}
-              className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2"
-              placeholder="20-1000"
-              disabled={isSubmitting}
-            />
+      <details className="slb-advanced">
+        <summary>Advanced Settings</summary>
+        <div className="slb-form-grid" style={{ marginTop: "14px" }}>
+          <label className="slb-inline-meta">
+            <input type="checkbox" name="useCustomDepth" defaultChecked={typeof selectedCustomCommitDepth === "number"} disabled={isSubmitting} />
+            <span className="slb-note">Use custom scan depth</span>
           </label>
 
-          <label className="flex items-center gap-2 text-sm text-zinc-700 md:col-span-2">
+          <div className="slb-form-grid slb-form-grid--2">
+            <label className="slb-field">
+              <span>Custom Depth</span>
+              <input
+                type="number"
+                name="customCommitDepth"
+                min={20}
+                max={1000}
+                defaultValue={selectedCustomCommitDepth ?? ""}
+                className="slb-input"
+                placeholder="20-1000"
+                disabled={isSubmitting}
+              />
+            </label>
+
+            <div />
+          </div>
+
+          <label className="slb-inline-meta">
             <input
               type="checkbox"
               name="useCustomLagThresholds"
@@ -238,39 +234,42 @@ export default function ScanControls({
               }
               disabled={isSubmitting}
             />
-            Use custom lag thresholds
-          </label>
-          <label className="text-sm text-zinc-700">
-            <span className="mb-1 block">Custom lag commits</span>
-            <input
-              type="number"
-              name="customLagCommitThreshold"
-              min={1}
-              max={5000}
-              defaultValue={selectedCustomLagCommitThreshold ?? ""}
-              className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2"
-              placeholder="1-5000"
-              disabled={isSubmitting}
-            />
+            <span className="slb-note">Use custom lag thresholds</span>
           </label>
 
-          <label className="text-sm text-zinc-700">
-            <span className="mb-1 block">Custom lag no-sync days</span>
-            <input
-              type="number"
-              name="customLagNoSyncDaysThreshold"
-              min={1}
-              max={3650}
-              defaultValue={selectedCustomLagNoSyncDaysThreshold ?? ""}
-              className="w-full rounded-md border border-zinc-300 bg-white px-3 py-2"
-              placeholder="1-3650"
-              disabled={isSubmitting}
-            />
-          </label>
+          <div className="slb-form-grid slb-form-grid--2">
+            <label className="slb-field">
+              <span>Custom Lag Commits</span>
+              <input
+                type="number"
+                name="customLagCommitThreshold"
+                min={1}
+                max={5000}
+                defaultValue={selectedCustomLagCommitThreshold ?? ""}
+                className="slb-input"
+                placeholder="1-5000"
+                disabled={isSubmitting}
+              />
+            </label>
+
+            <label className="slb-field">
+              <span>Custom Lag No-Sync Days</span>
+              <input
+                type="number"
+                name="customLagNoSyncDaysThreshold"
+                min={1}
+                max={3650}
+                defaultValue={selectedCustomLagNoSyncDaysThreshold ?? ""}
+                className="slb-input"
+                placeholder="1-3650"
+                disabled={isSubmitting}
+              />
+            </label>
+          </div>
         </div>
       </details>
 
-      {errorMessage ? <p className="text-xs text-red-700 md:col-span-4">{errorMessage}</p> : null}
+      {errorMessage ? <p className="slb-note" style={{ color: "#b42318" }}>{errorMessage}</p> : null}
     </form>
   );
 }
