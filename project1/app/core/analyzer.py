@@ -12,6 +12,45 @@ from app.config import MAX_ALIGNMENT_SAMPLES, MAX_FFT_SAMPLES
 MAX_FFT_POINTS = 512
 
 
+def _estimate_damping(samples, sample_rate):
+    """Fit an exponential envelope to the signal's amplitude peaks.
+
+    Returns (damping_rate, time_constant_s):
+      - damping_rate > 0: amplitude is decaying (damped)
+      - damping_rate ≈ 0: steady-state (no damping)
+      - damping_rate < 0: amplitude is growing
+      - time_constant_s: seconds to decay to 1/e (~37%) — None when rate <= 0
+    """
+    abs_s = np.abs(samples)
+    n = len(abs_s)
+    if n < 6:
+        return None, None
+
+    # Local maxima of the absolute-value envelope
+    peak_idx = [i for i in range(1, n - 1)
+                if abs_s[i] > abs_s[i - 1] and abs_s[i] > abs_s[i + 1]]
+    if len(peak_idx) < 3:
+        return None, None
+
+    peak_times = np.array(peak_idx, dtype=float) / sample_rate
+    peak_vals = abs_s[peak_idx]
+
+    # Discard peaks below 20 % of the max to avoid fitting to noise
+    threshold = 0.20 * float(np.max(peak_vals))
+    valid = peak_vals > threshold
+    if np.sum(valid) < 3:
+        return None, None
+
+    peak_times = peak_times[valid]
+    peak_vals = peak_vals[valid]
+
+    # log(A(t)) = log(A0) - alpha*t  →  slope = -alpha
+    slope, _ = np.polyfit(peak_times, np.log(peak_vals), 1)
+    alpha = float(-slope)
+    tau = float(1.0 / alpha) if alpha > 1e-6 else None
+    return alpha, tau
+
+
 def compute_metrics(samples, sample_rate, baseline=None):
     metrics = {}
 
@@ -65,6 +104,11 @@ def compute_metrics(samples, sample_rate, baseline=None):
     else:
         metrics["fft_freqs"] = freqs.tolist()
         metrics["fft_magnitudes"] = magnitudes.tolist()
+
+    # Damping — fit exponential envelope to amplitude peaks
+    damping_rate, damping_time_constant_s = _estimate_damping(samples, sample_rate)
+    metrics["damping_rate"] = damping_rate
+    metrics["damping_time_constant_s"] = damping_time_constant_s
 
     # Optional baseline comparison
     if baseline is not None:
@@ -171,6 +215,11 @@ def detect_degradation(metrics_ref, metrics_new):
     df_new = metrics_new.get("dominant_freq_hz") or 0
     if df_ref > 0 and abs(df_new - df_ref) / df_ref > 0.1:
         indicators.append(f"Dominant frequency shifted from {df_ref:.1f} Hz to {df_new:.1f} Hz")
+
+    damp_ref = metrics_ref.get("damping_rate")
+    damp_new = metrics_new.get("damping_rate")
+    if damp_ref is not None and damp_new is not None and abs(damp_new - damp_ref) > 1.0:
+        indicators.append(f"Damping rate changed from {damp_ref:.2f} to {damp_new:.2f} s⁻¹")
 
     rmse = metrics_new.get("rmse_vs_baseline")
     rms_ref = metrics_ref.get("rms") or 0

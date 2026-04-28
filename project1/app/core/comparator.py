@@ -11,6 +11,26 @@ from app.core.analyzer import compare_signals, compute_metrics, detect_degradati
 MAX_PLOT_POINTS = 1000
 
 
+def _phase_shift_deg(lag, sample_rate, freq_a, freq_b):
+    """Convert cross-correlation lag to phase shift in degrees.
+
+    Only meaningful when both signals share the same dominant frequency (within
+    10 %). Returns None when frequencies differ too much or are too low to give
+    a reliable result.
+    """
+    if not freq_a or not freq_b:
+        return None
+    if abs(freq_a - freq_b) / max(freq_a, freq_b) > 0.10:
+        return None
+    freq = (freq_a + freq_b) / 2.0
+    if freq < 0.5:
+        return None
+    phase = (lag / sample_rate) * freq * 360.0
+    # Normalise to (-180, 180]
+    phase = ((phase + 180.0) % 360.0) - 180.0
+    return float(phase)
+
+
 def _downsample(arr, max_points=MAX_PLOT_POINTS):
     if len(arr) > max_points:
         step = len(arr) // max_points
@@ -28,6 +48,10 @@ def compare_waveforms(waveform_a, waveform_b, label_a=None, label_b=None,
 
     metrics_a = compute_metrics(waveform_a.samples, waveform_a.sample_rate)
     metrics_b = compute_metrics(waveform_b.samples, waveform_b.sample_rate, baseline=waveform_a.samples)
+
+    phase_shift_deg = _phase_shift_deg(lag, waveform_a.sample_rate,
+                                       metrics_a.get("dominant_freq_hz", 0),
+                                       metrics_b.get("dominant_freq_hz", 0))
 
     # Build the aligned difference signal (used for metrics/diff chart only)
     min_len = min(len(waveform_a.samples), len(waveform_b.samples))
@@ -62,6 +86,7 @@ def compare_waveforms(waveform_a, waveform_b, label_a=None, label_b=None,
         "rmse": rmse,
         "correlation": correlation,
         "alignment_lag_samples": lag,
+        "phase_shift_deg": phase_shift_deg,
         "metrics_a": scalar_a,
         "metrics_b": scalar_b,
         "degradation_indicators": detect_degradation(metrics_a, metrics_b),
@@ -115,6 +140,9 @@ def compare_waveforms_multi(waveforms, display_samples=None):
             diff_len = min(len(a_aligned), len(b_aligned))
             difference = a_aligned[:diff_len] - b_aligned[:diff_len]
 
+            ps = _phase_shift_deg(lag, waveforms[i].sample_rate,
+                                   metrics_list[i].get("dominant_freq_hz", 0),
+                                   metrics_list[j].get("dominant_freq_hz", 0))
             pairs.append({
                 "i": i,
                 "j": j,
@@ -123,6 +151,7 @@ def compare_waveforms_multi(waveforms, display_samples=None):
                 "rmse": rmse,
                 "correlation": correlation,
                 "alignment_lag_samples": lag,
+                "phase_shift_deg": ps,
                 "difference": _downsample(difference),
                 "degradation_indicators": detect_degradation(metrics_list[i], metrics_list[j]),
             })

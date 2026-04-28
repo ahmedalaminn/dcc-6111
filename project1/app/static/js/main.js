@@ -237,6 +237,8 @@ function renderMetricTiles(waveformData) {
     { label: "Std Dev", value: Number(metrics.std).toFixed(5) },
     { label: "SNR (dB)", value: metrics.snr_db !== null ? Number(metrics.snr_db).toFixed(2) : "N/A" },
     { label: "Dom. Freq (Hz)", value: Number(metrics.dominant_freq_hz).toFixed(2) },
+    { label: "Damping Rate (s⁻¹)", value: metrics.damping_rate !== null && metrics.damping_rate !== undefined ? Number(metrics.damping_rate).toFixed(4) : "N/A" },
+    { label: "Time Constant (s)", value: metrics.damping_time_constant_s !== null && metrics.damping_time_constant_s !== undefined ? Number(metrics.damping_time_constant_s).toFixed(3) : "N/A" },
     { label: "Samples", value: Number(metrics.num_samples).toLocaleString() },
     { label: "Sample Rate", value: `${waveformData.sample_rate} Hz` },
   ];
@@ -483,6 +485,7 @@ function renderMultiCompareResult(result) {
           <th>RMSE</th>
           <th>Correlation</th>
           <th>Lag (samples)</th>
+          <th>Phase Shift (°)</th>
         </tr>
       </thead>
       <tbody>
@@ -500,6 +503,7 @@ function renderMultiCompareResult(result) {
             <td>${p.rmse.toFixed(6)}</td>
             <td>${p.correlation.toFixed(4)}</td>
             <td>${p.alignment_lag_samples}</td>
+            <td>${p.phase_shift_deg !== null && p.phase_shift_deg !== undefined ? Number(p.phase_shift_deg).toFixed(2) + "°" : "N/A"}</td>
           </tr>
         `).join("")}
       </tbody>
