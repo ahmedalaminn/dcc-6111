@@ -5,6 +5,8 @@ import json
 import os
 import time
 
+import numpy as np
+
 from app.core.analyzer import compare_signals, compute_metrics, detect_degradation
 
 # How many points to send back for plotting — don't need full resolution for display
@@ -33,8 +35,8 @@ def _phase_shift_deg(lag, sample_rate, freq_a, freq_b):
 
 def _downsample(arr, max_points=MAX_PLOT_POINTS):
     if len(arr) > max_points:
-        step = len(arr) // max_points
-        return arr[::step].tolist()
+        idx = np.linspace(0, len(arr) - 1, max_points, dtype=int)
+        return arr[idx].tolist()
     return arr.tolist()
 
 
@@ -47,7 +49,11 @@ def compare_waveforms(waveform_a, waveform_b, label_a=None, label_b=None,
     rmse, correlation, lag = compare_signals(waveform_a.samples, waveform_b.samples)
 
     metrics_a = compute_metrics(waveform_a.samples, waveform_a.sample_rate)
-    metrics_b = compute_metrics(waveform_b.samples, waveform_b.sample_rate, baseline=waveform_a.samples)
+    metrics_b = compute_metrics(waveform_b.samples, waveform_b.sample_rate)
+    # Reuse already-computed cross-correlation results instead of running compare_signals again
+    metrics_b["rmse_vs_baseline"] = rmse
+    metrics_b["correlation_vs_baseline"] = correlation
+    metrics_b["alignment_lag_samples"] = lag
 
     phase_shift_deg = _phase_shift_deg(lag, waveform_a.sample_rate,
                                        metrics_a.get("dominant_freq_hz", 0),
@@ -74,9 +80,10 @@ def compare_waveforms(waveform_a, waveform_b, label_a=None, label_b=None,
     scalar_a = {k: v for k, v in metrics_a.items() if not isinstance(v, list)}
     scalar_b = {k: v for k, v in metrics_b.items() if not isinstance(v, list)}
 
+    ts_ms = int(time.time() * 1000)
     result = {
-        "id": f"cmp_{int(time.time() * 1000)}",
-        "timestamp_ms": int(time.time() * 1000),
+        "id": f"cmp_{ts_ms}",
+        "timestamp_ms": ts_ms,
         "label_a": label_a,
         "label_b": label_b,
         "source_a": waveform_a.source_id,
@@ -183,6 +190,6 @@ def save_comparison(result, comparisons_dir):
             saveable[k] = v
 
     with open(filepath, "w") as f:
-        json.dump(saveable, f, indent=2)
+        json.dump(saveable, f, separators=(",", ":"))
 
     return filepath

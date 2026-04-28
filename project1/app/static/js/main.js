@@ -177,27 +177,10 @@ function renderWaveformChart(data) {
 }
 
 function renderFftChart() {
-  // Use the already-loaded downsampled waveform data — no extra request needed
   if (!state.currentWaveformData) return;
-  const samples = state.currentWaveformData.samples;
-  const sampleRate = state.currentWaveformData.display_sample_rate ?? state.currentWaveformData.sample_rate;
-  const n = samples.length;
-  const half = Math.floor(n / 2);
-  const freqBinHz = sampleRate / n;
-
-  // DFT on the downsampled data (~1000 points, fast enough in JS)
-  const freqs = [];
-  const mags = [];
-  for (let k = 1; k < half; k++) {   // skip DC bin at k=0
-    let sr = 0, si = 0;
-    for (let t = 0; t < n; t++) {
-      const angle = (2 * Math.PI * k * t) / n;
-      sr += samples[t] * Math.cos(angle);
-      si -= samples[t] * Math.sin(angle);
-    }
-    freqs.push((k * freqBinHz).toFixed(1));
-    mags.push(Math.sqrt(sr * sr + si * si) * 2 / n);
-  }
+  // Use server-computed FFT (numpy rfft on full data) — avoids O(n²) browser DFT
+  const freqs = (state.currentWaveformData.fft_freqs || []).map(f => Number(f).toFixed(1));
+  const mags  = state.currentWaveformData.fft_magnitudes || [];
 
   const ctx = document.getElementById("fft-chart").getContext("2d");
   if (fftChart) fftChart.destroy();

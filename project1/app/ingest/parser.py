@@ -89,8 +89,8 @@ def _parse_wave_v1(filepath, max_samples=None):
         if len(sample_bytes) < read_count * 4:
             raise ValueError(f"File appears truncated ({filepath})")
 
-        # big-endian float32 → float64 for all internal processing
-        samples = np.frombuffer(sample_bytes, dtype=">f4").astype(np.float64)
+        # big-endian float32 → native float32; stays float32 throughout the pipeline
+        samples = np.frombuffer(sample_bytes, dtype=">f4").astype(np.float32)
 
     return WaveformData(
         source_id=source_id,
@@ -110,7 +110,7 @@ def parse_raw_uint8(filepath, sample_rate, source_id, units="ADC counts", max_sa
     # (each uint8 sample = 1 byte, so byte count == sample count).
     with open(filepath, "rb") as f:
         raw = np.frombuffer(f.read(max_samples), dtype=np.uint8)
-    samples = raw.astype(np.float64)
+    samples = raw.astype(np.float32)
     samples -= samples.mean()
 
     return WaveformData(

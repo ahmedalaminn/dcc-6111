@@ -124,6 +124,8 @@ def create_app():
                 "display_step": display_step,
                 "display_sample_rate": wf.sample_rate / display_step,
                 "samples": samples.tolist(),
+                "fft_freqs": metrics.get("fft_freqs", []),
+                "fft_magnitudes": metrics.get("fft_magnitudes", []),
                 "metrics": {k: v for k, v in metrics.items() if not isinstance(v, list)},
             })
         except Exception as e:

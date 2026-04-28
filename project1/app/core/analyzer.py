@@ -11,6 +11,8 @@ from app.config import MAX_ALIGNMENT_SAMPLES, MAX_FFT_SAMPLES
 # Cap FFT output at 512 bins — enough frequency resolution for display without bloating responses
 MAX_FFT_POINTS = 512
 
+_SNR_KERNEL = np.ones(5, dtype=np.float32) / np.float32(5)
+
 
 def _estimate_damping(samples, sample_rate):
     """Fit an exponential envelope to the signal's amplitude peaks.
@@ -26,9 +28,8 @@ def _estimate_damping(samples, sample_rate):
     if n < 6:
         return None, None
 
-    # Local maxima of the absolute-value envelope
-    peak_idx = [i for i in range(1, n - 1)
-                if abs_s[i] > abs_s[i - 1] and abs_s[i] > abs_s[i + 1]]
+    # Local maxima of the absolute-value envelope — vectorised to avoid Python loop
+    peak_idx = np.where((abs_s[1:-1] > abs_s[:-2]) & (abs_s[1:-1] > abs_s[2:]))[0] + 1
     if len(peak_idx) < 3:
         return None, None
 
@@ -66,7 +67,7 @@ def compute_metrics(samples, sample_rate, baseline=None):
     # SNR estimate: smooth the signal with a 5-sample moving average to get the
     # "clean" component, then treat the residual as noise.
     if len(samples) >= 5:
-        smoothed = np.convolve(samples, np.ones(5) / 5, mode="same")
+        smoothed = np.convolve(samples, _SNR_KERNEL, mode="same")
         noise = samples - smoothed
         signal_power = float(np.mean(smoothed ** 2))
         noise_power = float(np.mean(noise ** 2))
