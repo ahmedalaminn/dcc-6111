@@ -1,12 +1,14 @@
 import queue
 import threading
 import time
+
 import zmq
 
 from proto.log_message_pb2 import LogMessage
 
 RECONNECT_DELAY_S = 2.0
 RECV_TIMEOUT_MS   = 500
+RECV_HWM          = 200
 
 class ZmqSubscriber(threading.Thread):
     def __init__(self, endpoint: str, topic: bytes, out_queue: queue.Queue) -> None:
@@ -17,7 +19,7 @@ class ZmqSubscriber(threading.Thread):
         self._stop_evt = threading.Event()
 
     def run(self) -> None:
-        ctx = zmq.Context()
+        ctx = zmq.Context(io_threads=1)
 
         while not self._stop_evt.is_set():
             sock   = ctx.socket(zmq.SUB)
@@ -25,6 +27,8 @@ class ZmqSubscriber(threading.Thread):
             try:
                 sock.connect(self.endpoint)
                 sock.setsockopt(zmq.SUBSCRIBE, self.topic)
+                sock.setsockopt(zmq.RCVHWM, RECV_HWM)
+                sock.setsockopt(zmq.LINGER, 0)
                 poller.register(sock, zmq.POLLIN)
                 print(f"[ZMQ] Connected to {self.endpoint}")
 

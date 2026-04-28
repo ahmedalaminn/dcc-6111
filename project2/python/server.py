@@ -21,7 +21,6 @@ Run
 """
 
 import argparse
-import collections
 import json
 import queue
 import random
@@ -30,28 +29,24 @@ import time
 from datetime import datetime
 
 from flask import Flask, Response, jsonify, render_template, request
-from flask_cors import CORS
-
-import sys
-import os
 
 from proto.log_message_pb2 import LogMessage
 from zmq_subscriber import ZmqSubscriber
 
 # -- Constants ------------------------------------------------------------------
-DEFAULT_ENDPOINT      = "tcp://localhost:5555"
+DEFAULT_ENDPOINT      = "tcp://127.0.0.1:5555"
 DEFAULT_HOST          = "0.0.0.0"
 DEFAULT_PORT          = 5000
 
 MAX_NODES             = 5
 NODE_TIMEOUT_S        = 10.0
-MAX_LOG_ROWS          = 200
 NODE_CHECK_INTERVAL_S = 1.0
 SSE_HEARTBEAT_S       = 15.0   # keep connection alive through NAT/proxies
+CLIENT_QUEUE_DEPTH    = 128
+INGEST_QUEUE_DEPTH    = 128
 
 # -- Flask app ------------------------------------------------------------------
 app = Flask(__name__)
-CORS(app)
 
 # -- Shared state ---------------------------------------------------------------
 _logging_enabled: bool = True
@@ -174,10 +169,20 @@ def stream():
     SSE endpoint. Each browser tab gets a queue so slow clients
     do not block others. The generator cleans up on disconnect.
     """
-    client_q: queue.Queue = queue.Queue(maxsize=200)
+    client_q: queue.Queue = queue.Queue(maxsize=CLIENT_QUEUE_DEPTH)
 
     with _clients_lock:
         _clients.append(client_q)
+
+    with _logging_lock:
+        client_q.put_nowait(("logging_toggle", {"enabled": _logging_enabled}))
+
+    now = time.time()
+    with _node_lock:
+        snapshot = dict(_node_last_seen)
+    for node_id, last_seen in snapshot.items():
+        status = "lost" if (now - last_seen) > NODE_TIMEOUT_S else "ok"
+        client_q.put_nowait(("node_status", {"node_id": node_id, "status": status}))
 
     def generate():
         try:
@@ -215,6 +220,22 @@ def toggle():
     # Broadcast the toggle event so the UI stays in sync
     _broadcast("logging_toggle", {"enabled": state})
     return jsonify({"enabled": state})
+
+
+@app.route("/health")
+def health():
+    with _node_lock:
+        tracked_nodes = len(_node_last_seen)
+    with _logging_lock:
+        logging_enabled = _logging_enabled
+    return jsonify(
+        {
+            "status": "ok",
+            "tracked_nodes": tracked_nodes,
+            "logging_enabled": logging_enabled,
+            "transport": "sse",
+        }
+    )
 
 
 # -- Entry point ----------------------------------------------------------------
@@ -256,7 +277,7 @@ def main() -> None:
         )
         src.start()
     else:
-        msg_queue: queue.Queue = queue.Queue(maxsize=500)
+        msg_queue: queue.Queue = queue.Queue(maxsize=INGEST_QUEUE_DEPTH)
         subscriber = ZmqSubscriber(
             endpoint=args.endpoint,
             topic=args.topic.encode(),

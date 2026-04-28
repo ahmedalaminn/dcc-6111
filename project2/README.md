@@ -1,64 +1,86 @@
-# Project 2 — Pubsub Network and UI Logger
+# Project 2 — BBB Logger Runtime
 
-Linux microservice for a pubsub data network with a logger UI, deployable on BeagleBone Black–class embedded targets (512MB RAM, 4GB storage). Uses ZeroMQ (XPUB/XSUB); UI shows data by node with timestamps and a diagnostic logging toggle.
+This temp copy is tuned for the BeagleBone Black deployment path:
 
-## Frontends (BBB-friendly)
+- the BBB runs the ZeroMQ broker and the Flask transcript dashboard
+- a MacBook simulates node publishers and sends data into the BBB broker
+- the dashboard is viewed in a browser, so the BBB does not need Node, React, or a local GUI stack
 
-Two frontend options that consume the same backend API:
+## Minimal runtime
 
-| Frontend | Stack | BBB suitability | Notes |
-|----------|--------|------------------|--------|
-| **Tkinter** | Python stdlib (`tkinter` + `urllib`) | ✅ Recommended | No GPU, no extra pip deps. Runs on BBB with default Python. |
-| **Web** | Flask serves HTML + SSE | ✅ Good | Headless: serve from BBB, view from any browser on the network. |
-| **Dear PyGui** | Python + OpenGL | ⚠️ Optional | May require building from source on ARM; use Tkinter if unavailable. |
+Only the Python backend is required on the BBB:
 
-### Tkinter UI (recommended on device)
+- `python/broker.py`
+- `python/server.py`
+- `python/zmq_subscriber.py`
+- `python/proto/log_message_pb2.py`
+- `python/templates/index.html`
 
-- **Zero extra dependencies** beyond the Python standard library.
-- Connects to the backend over HTTP: SSE for live log/node updates, POST for diagnostic toggle.
-- Run the backend first, then the Tk client:
+The protobuf binding is a lightweight local stub, so the runtime does not need the `protobuf` package.
+
+## BBB dependencies
+
+Preferred on-device install:
 
 ```bash
-cd frontend/python
-
-# Terminal 1: backend (demo mode or real ZMQ)
-pip3 install -r requirements.txt
-python3 server.py --demo
-# or: python3 server.py --endpoint tcp://192.168.1.10:5555
-
-# Terminal 2: Tkinter UI
-python3 main_tk.py
-# or: python3 main_tk.py --url http://192.168.1.10:5000
+sudo apt-get update
+sudo apt-get install -y python3 python3-pip python3-flask python3-zmq
 ```
 
-- On BBB: run `server.py` (and ZMQ broker if separate), then `python3 main_tk.py --url http://127.0.0.1:5000` (or the LAN IP of the machine serving the backend).
+Fallback pip install:
 
-### Web UI
+```bash
+python3 -m pip install --no-cache-dir -r python/requirements-bbb.txt
+```
 
-- Backend serves a dashboard at `http://<host>:5000` and streams events via Server-Sent Events.
-- Use when the UI is viewed from a laptop/tablet; the BBB only runs the backend (or backend + ZMQ).
+## BBB run flow
 
-### Dear PyGui UI
+On the BBB:
 
-- `main.py` runs a native GUI that pulls from a message queue (same process or local ZMQ). Heavier and may need ARM build; prefer Tkinter on BBB.
+```bash
+./run_bbb_broker.sh
+./run_bbb_server.sh
+```
 
-## Backend API (implemented by client)
+The dashboard is then available at:
 
-The frontend expects:
+```text
+http://<bbb-ip>:5000
+```
 
-- **GET /stream** — Server-Sent Events: `log` (ts, node_id, payload, topic) and `node_status` (node_id, status).
-- **POST /toggle** — Body `{"enabled": true|false}` to toggle diagnostic logging.
+## Mac node simulation
 
-## Project layout
+Run publishers from the Mac against the BBB XSUB port:
 
-- `frontend/python/` — Backend (Flask + ZMQ subscriber), Tkinter UI, Dear PyGui UI, protobufs.
-- `frontend/` (Vite/React) — Optional browser dashboard; for development or non-embedded use.
+```bash
+python3 python/publisher.py node-alpha --endpoint tcp://<bbb-ip>:5556
+python3 python/publisher.py node-beta --endpoint tcp://<bbb-ip>:5556
+```
 
-## BeagleBone Black notes (Debian 10 Buster, Python 3.7)
+Useful publisher options:
 
-- **Use python3 / pip3**: On BBB, `python` is 2.7.16; all run commands in this repo use `python3` and `pip3`.
-- **Python 3.7**: The Tkinter frontend (`gui_tk.py`, `main_tk.py`) is written for Python 3.7+ so it runs on Buster’s default Python. No 3.9+ syntax or ttk features (e.g. `padding=` on Frame) are used.
-- **Install Tk on BBB**: `sudo apt-get install python3-tk` (Debian 10 has `python3-tk` for 3.7).
-- **RAM**: 512MB — Tkinter and a single Flask process fit; avoid heavy browser or many tabs on the device.
-- **Storage**: 4GB — Prefer the Tkinter frontend (no Node/npm or large JS bundles on device).
-- **Display**: If the BBB has a small screen or HDMI, the Tkinter window scales; the web UI can be opened from another device.
+```bash
+python3 python/publisher.py node-alpha --endpoint tcp://<bbb-ip>:5556 --interval 1 --count 20
+python3 python/publisher.py node-beta --endpoint tcp://<bbb-ip>:5556 --payload-template "Mac simulator {node_id} sample {seq}"
+```
+
+## Is this a sufficient BBB test?
+
+Yes. Running the broker and dashboard on the BBB while a Mac simulates publishers is a valid functional integration test for the intended deployment model.
+
+It verifies:
+
+- BBB-side broker binding and forwarding
+- BBB-side subscriber ingestion
+- BBB-side transcript rendering and logging toggle
+- network transport from remote nodes into the BBB
+
+It does not replace:
+
+- long-duration soak testing
+- load testing with higher publish rates
+- validating real field nodes if they differ from the Mac simulator
+
+## Optional React frontend
+
+The Vite React app remains in this temp copy for laptop-only development, but it is not required for the BBB path and should not be installed on the BBB.

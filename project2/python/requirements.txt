@@ -1,15 +1,11 @@
-# SLB Distributed PubSub Network Logger
-# Target: BeagleBone Black (ARM Cortex-A8, 512MB RAM, Debian-based)
+# Minimal Python runtime used by the BBB deployment path.
+# Install with:
+#   python3 -m pip install -r requirements.txt
 #
-# Install:
-#   pip3 install -r requirements.txt
-#
-# Frontend options:
-#   - Tkinter (gui_tk.py / main_tk.py): stdlib only, no pip deps. Recommended for BBB.
-#   - Dear PyGui (gui.py / main.py): may need build from source on ARM; use Tkinter as fallback.
-
-# Backend / Dear PyGui stack
-dearpygui>=1.11.1
-pyzmq>=26.0.0
-protobuf>=5.0.0
-flask>=3.0.0
+# Notes:
+# - The protobuf module in proto/log_message_pb2.py is a lightweight local stub,
+#   so the google protobuf package is not required at runtime.
+# - BBB systems should prefer Debian packages first:
+#     sudo apt-get install -y python3-flask python3-zmq
+Flask>=2.2,<2.3
+pyzmq>=22,<25
