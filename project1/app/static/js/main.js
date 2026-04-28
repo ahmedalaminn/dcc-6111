@@ -333,8 +333,6 @@ function renderMetricsHistory() {
 // ---------------------------------------------------------------------------
 // Multi-waveform comparison
 // ---------------------------------------------------------------------------
-const COMPARE_SOURCES = ["sourceA", "sourceB", "sourceC", "sourceD", "sourceE"];
-
 function renderMultiCompareRows() {
   const container = document.getElementById("multi-compare-rows");
   if (!container) return;
@@ -342,7 +340,7 @@ function renderMultiCompareRows() {
 
   const slots = state.multiCompareSlots;
   const n = slots.length;
-  const srcOptions = COMPARE_SOURCES.map(s => `<option value="${s}">${s}</option>`).join("");
+  const srcOptions = state.sources.map(s => `<option value="${s}">${s}</option>`).join("");
 
   slots.forEach((slot, idx) => {
     const row = document.createElement("div");
