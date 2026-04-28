@@ -2,323 +2,408 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Waveform Report{% if source_id %} — {{ source_id }}{% endif %}</title>
   <style>
     :root {
-      --slb-blue: #0014dc;
-      --slb-blue-soft: rgba(0, 20, 220, 0.08);
-      --bg: #edf1f6;
+      --blue:    #0014dc;
+      --blue-lt: rgba(0,20,220,0.07);
+      --bg:      #edf1f6;
       --surface: #ffffff;
-      --surface-alt: #f6f8fb;
-      --border: #d7dce6;
-      --text: #091426;
-      --muted: #667085;
-      --success: #137a4f;
-      --danger: #b42318;
-      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-      --shadow: 0 20px 40px rgba(0, 20, 220, 0.06);
+      --alt:     #f6f8fb;
+      --border:  #d7dce6;
+      --text:    #091426;
+      --muted:   #667085;
+      --good:    #137a4f;
+      --warn:    #b45309;
+      --bad:     #b42318;
+      --good-bg: rgba(19,122,79,0.07);
+      --warn-bg: rgba(180,83,9,0.07);
+      --bad-bg:  rgba(180,35,24,0.07);
+      --mono:    "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
     }
-
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      padding: 0;
-      background: var(--bg);
-      color: var(--text);
-      font-family: "Helvetica Neue", Arial, sans-serif;
-      font-size: 14px;
-      line-height: 1.55;
-    }
-    .report-shell {
-      min-height: 100vh;
-    }
-    .masthead {
-      background: var(--slb-blue);
-      color: #ffffff;
-      padding: 18px 28px;
-    }
-    .masthead .eyebrow {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.18em;
-      color: rgba(255, 255, 255, 0.72);
-    }
-    .masthead h1 {
-      margin: 6px 0 0;
-      font-size: 34px;
-      line-height: 1.02;
-      font-weight: 400;
-      letter-spacing: -0.05em;
-    }
-    .subnav {
-      padding: 14px 28px;
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.16em;
-    }
-    .subnav .arrow {
-      color: var(--slb-blue);
-      font-weight: 700;
-      margin: 0 8px;
-    }
-    .page {
-      padding: 24px 28px 32px;
-      display: flex;
-      flex-direction: column;
-      gap: 18px;
-    }
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      box-shadow: var(--shadow);
-      overflow: hidden;
-    }
-    .card-head {
-      padding: 14px 18px;
-      background: var(--surface-alt);
-      border-bottom: 1px solid var(--border);
-    }
-    .kicker {
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.14em;
-      color: var(--slb-blue);
-    }
-    .card-head h2 {
-      margin: 4px 0 0;
-      font-size: 24px;
-      line-height: 1.08;
-      font-weight: 400;
-      letter-spacing: -0.04em;
-    }
-    .card-body {
-      padding: 18px;
-    }
-    .meta-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      color: var(--muted);
-      font-size: 12px;
-      text-transform: uppercase;
-      letter-spacing: 0.1em;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 14px;
-    }
-    th {
-      background: var(--surface-alt);
-      color: var(--muted);
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      padding: 10px 12px;
-      text-align: left;
-      border-bottom: 1px solid var(--border);
-    }
-    td {
-      padding: 10px 12px;
-      border-bottom: 1px solid #edf1f6;
-      font-size: 13px;
-      vertical-align: top;
-    }
-    td.metric,
-    .mono {
-      font-family: var(--mono);
-    }
-    .metric-highlight {
-      color: var(--slb-blue);
-      font-weight: 700;
-    }
-    .summary-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-      margin-top: 14px;
-    }
-    .summary-tile {
-      border: 1px solid var(--border);
-      background: var(--surface-alt);
-      padding: 14px;
-    }
-    .summary-tile .label {
-      font-size: 11px;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      font-weight: 700;
-    }
-    .summary-tile .value {
-      margin-top: 6px;
-      font-size: 22px;
-      color: var(--slb-blue);
-      font-weight: 700;
-      font-family: var(--mono);
-    }
-    .degradation-box {
-      background: rgba(180, 35, 24, 0.06);
-      border: 1px solid rgba(180, 35, 24, 0.18);
-      padding: 10px 12px;
-      margin-top: 10px;
-      color: var(--danger);
-    }
-    .no-degradation {
-      margin-top: 10px;
-      color: var(--success);
-      font-weight: 700;
-    }
-    .empty {
-      color: var(--muted);
-      text-align: center;
-      padding: 48px 18px;
-    }
-    @media print {
-      body { background: #ffffff; }
-      .card { box-shadow: none; }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:"Helvetica Neue",Arial,sans-serif;font-size:14px;line-height:1.55}
+    /* ── layout ── */
+    .masthead{background:var(--blue);color:#fff;padding:20px 28px 18px}
+    .masthead .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.18em;color:rgba(255,255,255,.65)}
+    .masthead h1{margin:6px 0 0;font-size:30px;font-weight:400;letter-spacing:-.04em}
+    .masthead .meta{margin-top:8px;font-size:12px;color:rgba(255,255,255,.7);display:flex;flex-wrap:wrap;gap:16px}
+    .page{padding:20px 28px 36px;display:flex;flex-direction:column;gap:18px}
+    /* ── cards ── */
+    .card{background:var(--surface);border:1px solid var(--border);overflow:hidden}
+    .card-head{padding:12px 18px;background:var(--alt);border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:10px}
+    .kicker{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.16em;color:var(--blue);white-space:nowrap}
+    .card-head h2{font-size:18px;font-weight:400;letter-spacing:-.03em}
+    .card-body{padding:16px 18px}
+    /* ── health tiles ── */
+    .health-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+    .htile{border:1px solid var(--border);padding:14px 16px;background:var(--alt)}
+    .htile.good{border-color:rgba(19,122,79,.3);background:var(--good-bg)}
+    .htile.warn{border-color:rgba(180,83,9,.3);background:var(--warn-bg)}
+    .htile.bad {border-color:rgba(180,35,24,.3);background:var(--bad-bg)}
+    .htile .h-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.13em;color:var(--muted)}
+    .htile .h-value{margin-top:6px;font-size:20px;font-family:var(--mono);font-weight:700;color:var(--blue)}
+    .htile.good .h-value{color:var(--good)}
+    .htile.warn .h-value{color:var(--warn)}
+    .htile.bad  .h-value{color:var(--bad)}
+    .htile .h-sub{margin-top:2px;font-size:11px;color:var(--muted)}
+    /* ── tables ── */
+    .tbl-wrap{overflow-x:auto;margin-top:12px}
+    table{width:100%;border-collapse:collapse;font-size:12.5px}
+    th{background:var(--alt);color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;padding:9px 11px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+    td{padding:9px 11px;border-bottom:1px solid #edf1f6;vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    .mono{font-family:var(--mono)}
+    .num{font-family:var(--mono);text-align:right}
+    .hi{color:var(--blue);font-weight:700}
+    .dim{color:var(--muted)}
+    /* ── trend badges ── */
+    .up{color:var(--bad)}
+    .dn{color:var(--good)}
+    .fl{color:var(--muted)}
+    .badge{display:inline-block;padding:1px 6px;border-radius:2px;font-size:11px;font-family:var(--mono);font-weight:600}
+    .badge.good{background:var(--good-bg);color:var(--good)}
+    .badge.warn{background:var(--warn-bg);color:var(--warn)}
+    .badge.bad {background:var(--bad-bg);color:var(--bad)}
+    /* ── comparison summary tiles ── */
+    .cmp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:18px}
+    .cmp-tile{border:1px solid var(--border);background:var(--alt);padding:14px 16px}
+    .cmp-tile .c-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.13em;color:var(--muted)}
+    .cmp-tile .c-value{margin-top:6px;font-size:20px;font-family:var(--mono);font-weight:700;color:var(--blue)}
+    .cmp-tile .c-sub{font-size:11px;color:var(--muted);margin-top:2px}
+    /* ── degradation ── */
+    .deg-list{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+    .deg-item{background:var(--bad-bg);border:1px solid rgba(180,35,24,.2);padding:8px 12px;color:var(--bad);font-size:13px}
+    .deg-item::before{content:"⚠ ";font-weight:700}
+    .no-deg{margin-top:10px;color:var(--good);font-weight:700;font-size:13px}
+    .no-deg::before{content:"✓ "}
+    /* ── section dividers ── */
+    .section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin:18px 0 8px}
+    /* ── empty state ── */
+    .empty{color:var(--muted);text-align:center;padding:40px 18px;font-size:13px}
+    /* ── print ── */
+    @media print{
+      body{background:#fff;font-size:11px}
+      .card{border:1px solid #ccc;break-inside:avoid}
+      .masthead{background:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     }
   </style>
 </head>
 <body>
-  <div class="report-shell">
-    <header class="masthead">
-      <div class="eyebrow">SLB Internal Tool Suite</div>
-      <h1>Waveform Engineering Report</h1>
-    </header>
+<div class="report-shell">
 
-    <div class="subnav">
-      <span>Source Metrics</span>
-      <span class="arrow">-&gt;</span>
-      <span>Comparison Summary</span>
-      <span class="arrow">-&gt;</span>
-      <span>Signal Review</span>
+  <header class="masthead">
+    <div class="eyebrow">SLB Internal Tool Suite — Waveform Monitoring System</div>
+    <h1>Signal Engineering Report</h1>
+    <div class="meta">
+      <span>Generated: {{ generated_at }}</span>
+      {% if source_id %}<span>Source: {{ source_id }}</span>{% endif %}
+      {% if comparison_id %}<span>Comparison: {{ comparison_id }}</span>{% endif %}
+      {% if summary.capture_count %}<span>Captures: {{ summary.capture_count }}</span>{% endif %}
     </div>
+  </header>
 
-    <main class="page">
-      <section class="card">
-        <div class="card-head">
-          <div class="kicker">Report Metadata</div>
-          <h2>
-            {% if source_id %}Source: {{ source_id }}{% else %}General Report{% endif %}
-            {% if comparison_id %} | Comparison: {{ comparison_id }}{% endif %}
-          </h2>
-        </div>
-        <div class="card-body">
-          <div class="meta-row">
-            <span>Generated: {{ generated_at }}</span>
-            {% if source_id %}<span>Waveform Source: {{ source_id }}</span>{% endif %}
-            {% if comparison_id %}<span>Comparison ID: {{ comparison_id }}</span>{% endif %}
+  <main class="page">
+
+    {# ── SIGNAL HEALTH SUMMARY ── #}
+    {% if summary %}
+    <section class="card">
+      <div class="card-head">
+        <span class="kicker">Signal Health</span>
+        <h2>Status Overview</h2>
+      </div>
+      <div class="card-body">
+        <div class="health-grid">
+
+          {% if summary.overall_health is defined %}
+          <div class="htile {{ summary.overall_health }}">
+            <div class="h-label">Overall Health</div>
+            <div class="h-value">
+              {% if summary.overall_health == 'good' %}GOOD
+              {% elif summary.overall_health == 'warn' %}WARN
+              {% else %}FAULT{% endif %}
+            </div>
+            <div class="h-sub">{% if summary.capture_count %}{{ summary.capture_count }} capture(s){% endif %}</div>
           </div>
-        </div>
-      </section>
+          {% endif %}
 
-      {% if metrics_history %}
-      <section class="card">
-        <div class="card-head">
-          <div class="kicker">Metrics History</div>
-          <h2>Signal Metrics{% if source_id %} — {{ source_id }}{% endif %}</h2>
+          {% if summary.snr_health is defined %}
+          <div class="htile {{ summary.snr_health }}">
+            <div class="h-label">SNR Status</div>
+            <div class="h-value">
+              {% if summary.snr_min is defined %}{{ "%.1f"|format(summary.snr_min) }} dB{% else %}—{% endif %}
+            </div>
+            <div class="h-sub">
+              {% if summary.snr_min is defined and summary.snr_max is defined %}
+                Range: {{ "%.1f"|format(summary.snr_min) }}–{{ "%.1f"|format(summary.snr_max) }} dB
+              {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if summary.freq_health is defined %}
+          <div class="htile {{ summary.freq_health }}">
+            <div class="h-label">Freq Stability</div>
+            <div class="h-value">
+              {% if summary.freq_max_dev_pct is defined %}{{ "%.2f"|format(summary.freq_max_dev_pct) }}%{% else %}—{% endif %}
+            </div>
+            <div class="h-sub">Max deviation from capture 1</div>
+          </div>
+          {% endif %}
+
+          {% if summary.amp_health is defined %}
+          <div class="htile {{ summary.amp_health }}">
+            <div class="h-label">Amplitude Stability</div>
+            <div class="h-value">
+              {% if summary.rms_var_pct is defined %}{{ "%.2f"|format(summary.rms_var_pct) }}%{% else %}—{% endif %}
+            </div>
+            <div class="h-sub">RMS variation across captures</div>
+          </div>
+          {% endif %}
+
         </div>
-        <div class="card-body">
+      </div>
+    </section>
+    {% endif %}
+
+    {# ── CAPTURE METRICS TABLE ── #}
+    {% if metrics_history %}
+    <section class="card">
+      <div class="card-head">
+        <span class="kicker">Metrics History</span>
+        <h2>Per-Capture Signal Metrics{% if source_id %} — {{ source_id }}{% endif %}</h2>
+      </div>
+      <div class="card-body">
+        <div class="tbl-wrap">
           <table>
             <thead>
               <tr>
-                <th>Filename</th>
+                <th>File</th>
+                <th>Captured (UTC)</th>
+                <th>Rate (Hz)</th>
+                <th>Duration (s)</th>
+                <th>Samples</th>
                 <th>Peak-to-Peak</th>
                 <th>RMS</th>
                 <th>Mean</th>
+                <th>Std Dev</th>
                 <th>SNR (dB)</th>
                 <th>Dom. Freq (Hz)</th>
-                <th>Samples</th>
+                <th>Damping (s⁻¹)</th>
+                <th>τ (s)</th>
               </tr>
             </thead>
             <tbody>
               {% for row in metrics_history %}
               <tr>
                 <td class="mono">{{ row.filename }}</td>
-                <td class="metric metric-highlight">{{ "%.5f"|format(row.peak_to_peak|float) }}</td>
-                <td class="metric metric-highlight">{{ "%.5f"|format(row.rms|float) }}</td>
-                <td class="metric">{{ "%.5f"|format(row.mean|float) }}</td>
-                <td class="metric">{% if row.snr_db and row.snr_db != 'None' %}{{ "%.2f"|format(row.snr_db|float) }}{% else %}N/A{% endif %}</td>
-                <td class="metric">{{ "%.2f"|format(row.dominant_freq_hz|float) }}</td>
-                <td class="metric">{{ row.num_samples }}</td>
+                <td class="dim" style="white-space:nowrap">{{ row.timestamp_str }}</td>
+                <td class="num">{% if row.sample_rate is not none %}{{ row.sample_rate | int }}{% else %}—{% endif %}</td>
+                <td class="num">{% if row.duration_s is not none %}{{ "%.3f"|format(row.duration_s) }}{% else %}—{% endif %}</td>
+                <td class="num">{% if row.num_samples is not none %}{{ row.num_samples | int | string | replace(".", "") }}{% else %}—{% endif %}</td>
+                <td class="num hi">{% if row.peak_to_peak is not none %}{{ "%.5f"|format(row.peak_to_peak) }}{% else %}—{% endif %}</td>
+                <td class="num hi">{% if row.rms is not none %}{{ "%.5f"|format(row.rms) }}{% else %}—{% endif %}</td>
+                <td class="num">{% if row.mean is not none %}{{ "%.5f"|format(row.mean) }}{% else %}—{% endif %}</td>
+                <td class="num">{% if row.std is not none %}{{ "%.5f"|format(row.std) }}{% else %}—{% endif %}</td>
+                <td class="num {% if row.snr_db is not none %}{% if row.snr_db > 10 %}hi{% elif row.snr_db < 0 %}bad{% endif %}{% endif %}">
+                  {% if row.snr_db is not none %}{{ "%.2f"|format(row.snr_db) }}{% else %}N/A{% endif %}
+                </td>
+                <td class="num hi">{% if row.dominant_freq_hz is not none %}{{ "%.2f"|format(row.dominant_freq_hz) }}{% else %}—{% endif %}</td>
+                <td class="num">{% if row.damping_rate is not none %}{{ "%.4f"|format(row.damping_rate) }}{% else %}—{% endif %}</td>
+                <td class="num">{% if row.damping_time_constant_s is not none %}{{ "%.3f"|format(row.damping_time_constant_s) }}{% else %}N/A{% endif %}</td>
               </tr>
               {% endfor %}
             </tbody>
           </table>
         </div>
-      </section>
-      {% endif %}
+      </div>
+    </section>
 
-      {% if comparison %}
-      <section class="card">
-        <div class="card-head">
-          <div class="kicker">Comparison Output</div>
-          <h2>{{ comparison.label_a }} vs {{ comparison.label_b }}</h2>
+    {# ── TREND ANALYSIS ── #}
+    {% if summary and summary.first_filename is defined %}
+    <section class="card">
+      <div class="card-head">
+        <span class="kicker">Trend Analysis</span>
+        <h2>First vs Last Capture</h2>
+      </div>
+      <div class="card-body">
+        <div class="dim" style="font-size:12px;margin-bottom:12px">
+          Baseline: <span class="mono">{{ summary.first_filename }}</span>
+          &nbsp;→&nbsp;
+          Latest: <span class="mono">{{ summary.last_filename }}</span>
         </div>
-        <div class="card-body">
-          <div class="summary-grid">
-            <div class="summary-tile">
-              <div class="label">RMSE</div>
-              <div class="value">{{ "%.6f"|format(comparison.rmse|float) }}</div>
-            </div>
-            <div class="summary-tile">
-              <div class="label">Correlation</div>
-              <div class="value">{{ "%.4f"|format(comparison.correlation|float) }}</div>
-            </div>
-            <div class="summary-tile">
-              <div class="label">Alignment Lag</div>
-              <div class="value">{{ comparison.alignment_lag_samples }}</div>
-            </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Change (absolute)</th>
+                <th>Change (%)</th>
+                <th>Direction</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% set trend_metrics = [
+                ("RMS",             "rms_delta",             "rms_delta_pct"),
+                ("Peak-to-Peak",    "peak_to_peak_delta",    "peak_to_peak_delta_pct"),
+                ("SNR (dB)",        "snr_db_delta",          "snr_db_delta_pct"),
+                ("Dom. Freq (Hz)",  "dominant_freq_hz_delta","dominant_freq_hz_delta_pct"),
+                ("Damping Rate",    "damping_rate_delta",    "damping_rate_delta_pct"),
+              ] %}
+              {% for label, dk, dpk in trend_metrics %}
+              {% if summary[dk] is defined %}
+              <tr>
+                <td>{{ label }}</td>
+                <td class="num mono">{{ "%.6f"|format(summary[dk]) }}</td>
+                <td class="num mono">{{ "%.2f"|format(summary[dpk]) }}%</td>
+                <td>
+                  {% if summary[dpk] > 1 %}
+                    <span class="badge bad">▲ Increasing</span>
+                  {% elif summary[dpk] < -1 %}
+                    <span class="badge good">▼ Decreasing</span>
+                  {% else %}
+                    <span class="badge" style="background:var(--alt);color:var(--muted)">— Stable</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endif %}
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <p class="dim" style="font-size:11px;margin-top:10px">
+          Note: for SNR, a decrease (▼) is degradation. For RMS and peak-to-peak, interpretation depends on expected signal amplitude.
+        </p>
+      </div>
+    </section>
+    {% endif %}
+    {% endif %}
+
+    {# ── COMPARISON SECTION ── #}
+    {% if comparison %}
+    <section class="card">
+      <div class="card-head">
+        <span class="kicker">Comparison Output</span>
+        <h2>{{ comparison.label_a }} vs {{ comparison.label_b }}</h2>
+      </div>
+      <div class="card-body">
+
+        {# summary tiles #}
+        <div class="cmp-grid">
+          <div class="cmp-tile">
+            <div class="c-label">RMSE</div>
+            <div class="c-value">{{ "%.6f"|format(comparison.rmse|float) }}</div>
+            <div class="c-sub">Root mean square error</div>
           </div>
-
-          <h3 style="margin:20px 0 0;font-size:14px;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);">Degradation Indicators</h3>
-          {% if comparison.degradation_indicators %}
-            {% for ind in comparison.degradation_indicators %}
-            <div class="degradation-box">-&gt; {{ ind }}</div>
-            {% endfor %}
+          <div class="cmp-tile">
+            <div class="c-label">Correlation</div>
+            <div class="c-value">{{ "%.4f"|format(comparison.correlation|float) }}</div>
+            <div class="c-sub">Pearson, post-alignment</div>
+          </div>
+          <div class="cmp-tile">
+            <div class="c-label">Lag (samples)</div>
+            <div class="c-value">{{ comparison.alignment_lag_samples }}</div>
+            <div class="c-sub">A leads B when positive</div>
+          </div>
+          {% if comparison.phase_shift_deg is not none and comparison.phase_shift_deg != None %}
+          <div class="cmp-tile">
+            <div class="c-label">Phase Shift</div>
+            <div class="c-value">{{ "%.2f"|format(comparison.phase_shift_deg|float) }}°</div>
+            <div class="c-sub">At dominant frequency</div>
+          </div>
           {% else %}
-            <p class="no-degradation">No degradation indicators detected.</p>
+          <div class="cmp-tile" style="opacity:.55">
+            <div class="c-label">Phase Shift</div>
+            <div class="c-value">N/A</div>
+            <div class="c-sub">Frequencies differ &gt;10%</div>
+          </div>
           {% endif %}
+        </div>
 
-          <h3 style="margin:20px 0 0;font-size:14px;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);">Signal A Metrics</h3>
+        {# degradation indicators #}
+        <div class="section-label">Degradation Indicators</div>
+        {% if comparison.degradation_indicators %}
+          <div class="deg-list">
+            {% for ind in comparison.degradation_indicators %}
+            <div class="deg-item">{{ ind }}</div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="no-deg">No degradation indicators detected.</div>
+        {% endif %}
+
+        {# side-by-side metrics #}
+        {% if comparison.metrics_a is defined and comparison.metrics_b is defined %}
+        <div class="section-label">Signal Metrics Comparison</div>
+        <div class="tbl-wrap">
           <table>
             <thead>
-              <tr><th>Metric</th><th>Value</th></tr>
+              <tr>
+                <th>Metric</th>
+                <th>Signal A — {{ comparison.filename_a }}</th>
+                <th>Signal B — {{ comparison.filename_b }}</th>
+                <th>Delta</th>
+              </tr>
             </thead>
             <tbody>
-              {% for key, val in comparison.metrics_a.items() %}
-              <tr><td>{{ key }}</td><td class="metric mono metric-highlight">{{ val }}</td></tr>
-              {% endfor %}
-            </tbody>
-          </table>
-
-          <h3 style="margin:20px 0 0;font-size:14px;text-transform:uppercase;letter-spacing:0.12em;color:var(--muted);">Signal B Metrics</h3>
-          <table>
-            <thead>
-              <tr><th>Metric</th><th>Value</th></tr>
-            </thead>
-            <tbody>
-              {% for key, val in comparison.metrics_b.items() %}
-              <tr><td>{{ key }}</td><td class="metric mono metric-highlight">{{ val }}</td></tr>
+              {% set cmp_rows = [
+                ("Peak-to-Peak",    "peak_to_peak",          "%.5f"),
+                ("RMS",             "rms",                   "%.5f"),
+                ("Mean",            "mean",                  "%.5f"),
+                ("Std Dev",         "std",                   "%.5f"),
+                ("SNR (dB)",        "snr_db",                "%.2f"),
+                ("Dom. Freq (Hz)",  "dominant_freq_hz",      "%.2f"),
+                ("Damping (s⁻¹)",  "damping_rate",          "%.4f"),
+                ("Time Const. (s)", "damping_time_constant_s","%.3f"),
+                ("RMSE vs A",       "rmse_vs_baseline",      "%.6f"),
+                ("Corr. vs A",      "correlation_vs_baseline","%.4f"),
+              ] %}
+              {% for label, key, fmt in cmp_rows %}
+              {% set va = comparison.metrics_a.get(key) %}
+              {% set vb = comparison.metrics_b.get(key) %}
+              {% if va is not none or vb is not none %}
+              <tr>
+                <td>{{ label }}</td>
+                <td class="num mono {% if va is not none %}hi{% else %}dim{% endif %}">
+                  {% if va is not none %}{{ fmt|format(va|float) }}{% else %}N/A{% endif %}
+                </td>
+                <td class="num mono {% if vb is not none %}hi{% else %}dim{% endif %}">
+                  {% if vb is not none %}{{ fmt|format(vb|float) }}{% else %}N/A{% endif %}
+                </td>
+                <td class="num mono">
+                  {% if va is not none and vb is not none %}
+                    {% set delta = vb|float - va|float %}
+                    {% if delta > 0 %}<span class="up">+{{ fmt|format(delta) }}</span>
+                    {% elif delta < 0 %}<span class="dn">{{ fmt|format(delta) }}</span>
+                    {% else %}<span class="fl">0</span>{% endif %}
+                  {% else %}—{% endif %}
+                </td>
+              </tr>
+              {% endif %}
               {% endfor %}
             </tbody>
           </table>
         </div>
-      </section>
-      {% endif %}
+        {% endif %}
 
-      {% if not metrics_history and not comparison %}
-      <section class="card">
-        <div class="empty">No data available for this report.</div>
-      </section>
-      {% endif %}
-    </main>
-  </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {# ── EMPTY STATE ── #}
+    {% if not metrics_history and not comparison %}
+    <section class="card">
+      <div class="empty">No data available for this report.</div>
+    </section>
+    {% endif %}
+
+  </main>
+
+  <footer style="padding:12px 28px 24px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.1em">
+    SLB Waveform Monitoring System &mdash; Generated {{ generated_at }}
+  </footer>
+
+</div>
 </body>
 </html>

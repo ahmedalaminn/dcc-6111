@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Waveform Report — sourceA</title>
+  <style>
+    :root {
+      --blue:    #0014dc;
+      --blue-lt: rgba(0,20,220,0.07);
+      --bg:      #edf1f6;
+      --surface: #ffffff;
+      --alt:     #f6f8fb;
+      --border:  #d7dce6;
+      --text:    #091426;
+      --muted:   #667085;
+      --good:    #137a4f;
+      --warn:    #b45309;
+      --bad:     #b42318;
+      --good-bg: rgba(19,122,79,0.07);
+      --warn-bg: rgba(180,83,9,0.07);
+      --bad-bg:  rgba(180,35,24,0.07);
+      --mono:    "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);font-family:"Helvetica Neue",Arial,sans-serif;font-size:14px;line-height:1.55}
+    /* ── layout ── */
+    .masthead{background:var(--blue);color:#fff;padding:20px 28px 18px}
+    .masthead .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.18em;color:rgba(255,255,255,.65)}
+    .masthead h1{margin:6px 0 0;font-size:30px;font-weight:400;letter-spacing:-.04em}
+    .masthead .meta{margin-top:8px;font-size:12px;color:rgba(255,255,255,.7);display:flex;flex-wrap:wrap;gap:16px}
+    .page{padding:20px 28px 36px;display:flex;flex-direction:column;gap:18px}
+    /* ── cards ── */
+    .card{background:var(--surface);border:1px solid var(--border);overflow:hidden}
+    .card-head{padding:12px 18px;background:var(--alt);border-bottom:1px solid var(--border);display:flex;align-items:baseline;gap:10px}
+    .kicker{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.16em;color:var(--blue);white-space:nowrap}
+    .card-head h2{font-size:18px;font-weight:400;letter-spacing:-.03em}
+    .card-body{padding:16px 18px}
+    /* ── health tiles ── */
+    .health-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px}
+    .htile{border:1px solid var(--border);padding:14px 16px;background:var(--alt)}
+    .htile.good{border-color:rgba(19,122,79,.3);background:var(--good-bg)}
+    .htile.warn{border-color:rgba(180,83,9,.3);background:var(--warn-bg)}
+    .htile.bad {border-color:rgba(180,35,24,.3);background:var(--bad-bg)}
+    .htile .h-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.13em;color:var(--muted)}
+    .htile .h-value{margin-top:6px;font-size:20px;font-family:var(--mono);font-weight:700;color:var(--blue)}
+    .htile.good .h-value{color:var(--good)}
+    .htile.warn .h-value{color:var(--warn)}
+    .htile.bad  .h-value{color:var(--bad)}
+    .htile .h-sub{margin-top:2px;font-size:11px;color:var(--muted)}
+    /* ── tables ── */
+    .tbl-wrap{overflow-x:auto;margin-top:12px}
+    table{width:100%;border-collapse:collapse;font-size:12.5px}
+    th{background:var(--alt);color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;padding:9px 11px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap}
+    td{padding:9px 11px;border-bottom:1px solid #edf1f6;vertical-align:middle}
+    tr:last-child td{border-bottom:none}
+    .mono{font-family:var(--mono)}
+    .num{font-family:var(--mono);text-align:right}
+    .hi{color:var(--blue);font-weight:700}
+    .dim{color:var(--muted)}
+    /* ── trend badges ── */
+    .up{color:var(--bad)}
+    .dn{color:var(--good)}
+    .fl{color:var(--muted)}
+    .badge{display:inline-block;padding:1px 6px;border-radius:2px;font-size:11px;font-family:var(--mono);font-weight:600}
+    .badge.good{background:var(--good-bg);color:var(--good)}
+    .badge.warn{background:var(--warn-bg);color:var(--warn)}
+    .badge.bad {background:var(--bad-bg);color:var(--bad)}
+    /* ── comparison summary tiles ── */
+    .cmp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:18px}
+    .cmp-tile{border:1px solid var(--border);background:var(--alt);padding:14px 16px}
+    .cmp-tile .c-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.13em;color:var(--muted)}
+    .cmp-tile .c-value{margin-top:6px;font-size:20px;font-family:var(--mono);font-weight:700;color:var(--blue)}
+    .cmp-tile .c-sub{font-size:11px;color:var(--muted);margin-top:2px}
+    /* ── degradation ── */
+    .deg-list{margin-top:12px;display:flex;flex-direction:column;gap:6px}
+    .deg-item{background:var(--bad-bg);border:1px solid rgba(180,35,24,.2);padding:8px 12px;color:var(--bad);font-size:13px}
+    .deg-item::before{content:"⚠ ";font-weight:700}
+    .no-deg{margin-top:10px;color:var(--good);font-weight:700;font-size:13px}
+    .no-deg::before{content:"✓ "}
+    /* ── section dividers ── */
+    .section-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.14em;color:var(--muted);margin:18px 0 8px}
+    /* ── empty state ── */
+    .empty{color:var(--muted);text-align:center;padding:40px 18px;font-size:13px}
+    /* ── print ── */
+    @media print{
+      body{background:#fff;font-size:11px}
+      .card{border:1px solid #ccc;break-inside:avoid}
+      .masthead{background:#000!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    }
+  </style>
+</head>
+<body>
+<div class="report-shell">
+
+  <header class="masthead">
+    <div class="eyebrow">SLB Internal Tool Suite — Waveform Monitoring System</div>
+    <h1>Signal Engineering Report</h1>
+    <div class="meta">
+      <span>Generated: 2026-04-28 21:39:16 UTC</span>
+      <span>Source: sourceA</span>
+      
+      <span>Captures: 3</span>
+    </div>
+  </header>
+
+  <main class="page">
+
+    
+    
+    <section class="card">
+      <div class="card-head">
+        <span class="kicker">Signal Health</span>
+        <h2>Status Overview</h2>
+      </div>
+      <div class="card-body">
+        <div class="health-grid">
+
+          
+          <div class="htile bad">
+            <div class="h-label">Overall Health</div>
+            <div class="h-value">
+              FAULT
+            </div>
+            <div class="h-sub">3 capture(s)</div>
+          </div>
+          
+
+          
+          <div class="htile good">
+            <div class="h-label">SNR Status</div>
+            <div class="h-value">
+              17.8 dB
+            </div>
+            <div class="h-sub">
+              
+                Range: 17.8–32.0 dB
+              
+            </div>
+          </div>
+          
+
+          
+          <div class="htile good">
+            <div class="h-label">Freq Stability</div>
+            <div class="h-value">
+              0.00%
+            </div>
+            <div class="h-sub">Max deviation from capture 1</div>
+          </div>
+          
+
+          
+          <div class="htile bad">
+            <div class="h-label">Amplitude Stability</div>
+            <div class="h-value">
+              20.64%
+            </div>
+            <div class="h-sub">RMS variation across captures</div>
+          </div>
+          
+
+        </div>
+      </div>
+    </section>
+    
+
+    
+    
+    <section class="card">
+      <div class="card-head">
+        <span class="kicker">Metrics History</span>
+        <h2>Per-Capture Signal Metrics — sourceA</h2>
+      </div>
+      <div class="card-body">
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>File</th>
+                <th>Captured (UTC)</th>
+                <th>Rate (Hz)</th>
+                <th>Duration (s)</th>
+                <th>Samples</th>
+                <th>Peak-to-Peak</th>
+                <th>RMS</th>
+                <th>Mean</th>
+                <th>Std Dev</th>
+                <th>SNR (dB)</th>
+                <th>Dom. Freq (Hz)</th>
+                <th>Damping (s⁻¹)</th>
+                <th>τ (s)</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+              <tr>
+                <td class="mono">capture_001.bin</td>
+                <td class="dim" style="white-space:nowrap">2026-03-15 19:54:26 UTC</td>
+                <td class="num">1000</td>
+                <td class="num">1.000</td>
+                <td class="num">1000</td>
+                <td class="num hi">2.10047</td>
+                <td class="num hi">0.70792</td>
+                <td class="num">-0.00096</td>
+                <td class="num">0.70792</td>
+                <td class="num hi">
+                  31.97
+                </td>
+                <td class="num hi">10.00</td>
+                <td class="num">-0.1107</td>
+                <td class="num">N/A</td>
+              </tr>
+              
+              <tr>
+                <td class="mono">capture_002.bin</td>
+                <td class="dim" style="white-space:nowrap">2026-03-15 19:54:26 UTC</td>
+                <td class="num">1000</td>
+                <td class="num">1.000</td>
+                <td class="num">1000</td>
+                <td class="num hi">2.23374</td>
+                <td class="num hi">0.70810</td>
+                <td class="num">-0.00271</td>
+                <td class="num">0.70810</td>
+                <td class="num hi">
+                  23.90
+                </td>
+                <td class="num hi">10.00</td>
+                <td class="num">0.0736</td>
+                <td class="num">13.584</td>
+              </tr>
+              
+              <tr>
+                <td class="mono">capture_003.bin</td>
+                <td class="dim" style="white-space:nowrap">2026-03-15 19:54:26 UTC</td>
+                <td class="num">1000</td>
+                <td class="num">1.000</td>
+                <td class="num">1000</td>
+                <td class="num hi">1.98504</td>
+                <td class="num hi">0.57138</td>
+                <td class="num">-0.00179</td>
+                <td class="num">0.57138</td>
+                <td class="num hi">
+                  17.80
+                </td>
+                <td class="num hi">10.00</td>
+                <td class="num">0.0543</td>
+                <td class="num">18.428</td>
+              </tr>
+              
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    
+    
+    <section class="card">
+      <div class="card-head">
+        <span class="kicker">Trend Analysis</span>
+        <h2>First vs Last Capture</h2>
+      </div>
+      <div class="card-body">
+        <div class="dim" style="font-size:12px;margin-bottom:12px">
+          Baseline: <span class="mono">capture_001.bin</span>
+          &nbsp;→&nbsp;
+          Latest: <span class="mono">capture_003.bin</span>
+        </div>
+        <div class="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Metric</th>
+                <th>Change (absolute)</th>
+                <th>Change (%)</th>
+                <th>Direction</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+              
+              
+              <tr>
+                <td>RMS</td>
+                <td class="num mono">-0.136537</td>
+                <td class="num mono">-19.29%</td>
+                <td>
+                  
+                    <span class="badge good">▼ Decreasing</span>
+                  
+                </td>
+              </tr>
+              
+              
+              
+              <tr>
+                <td>Peak-to-Peak</td>
+                <td class="num mono">-0.115429</td>
+                <td class="num mono">-5.50%</td>
+                <td>
+                  
+                    <span class="badge good">▼ Decreasing</span>
+                  
+                </td>
+              </tr>
+              
+              
+              
+              <tr>
+                <td>SNR (dB)</td>
+                <td class="num mono">-14.169824</td>
+                <td class="num mono">-44.33%</td>
+                <td>
+                  
+                    <span class="badge good">▼ Decreasing</span>
+                  
+                </td>
+              </tr>
+              
+              
+              
+              <tr>
+                <td>Dom. Freq (Hz)</td>
+                <td class="num mono">0.000000</td>
+                <td class="num mono">0.00%</td>
+                <td>
+                  
+                    <span class="badge" style="background:var(--alt);color:var(--muted)">— Stable</span>
+                  
+                </td>
+              </tr>
+              
+              
+              
+              <tr>
+                <td>Damping Rate</td>
+                <td class="num mono">0.164917</td>
+                <td class="num mono">149.04%</td>
+                <td>
+                  
+                    <span class="badge bad">▲ Increasing</span>
+                  
+                </td>
+              </tr>
+              
+              
+            </tbody>
+          </table>
+        </div>
+        <p class="dim" style="font-size:11px;margin-top:10px">
+          Note: for SNR, a decrease (▼) is degradation. For RMS and peak-to-peak, interpretation depends on expected signal amplitude.
+        </p>
+      </div>
+    </section>
+    
+    
+
+    
+    
+
+    
+    
+
+  </main>
+
+  <footer style="padding:12px 28px 24px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.1em">
+    SLB Waveform Monitoring System &mdash; Generated 2026-04-28 21:39:16 UTC
+  </footer>
+
+</div>
+</body>
+</html>
