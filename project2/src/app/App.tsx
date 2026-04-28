@@ -35,7 +35,7 @@ export default function App() {
   }, [logMessages]);
 
   useEffect(() => {
-    const eventSource = new EventSource("http://localhost:5000/stream");
+    const eventSource = new EventSource("http://localhost:5001/stream");
 
     eventSource.addEventListener("logging_toggle", (event) => {
       const data = JSON.parse(event.data);
@@ -82,7 +82,7 @@ export default function App() {
   async function toggleDiagnosticLogging() {
     const nextState = !diagnosticLoggingEnabled;
     try {
-      const response = await fetch("http://localhost:5000/toggle", {
+      const response = await fetch("http://localhost:5001/toggle", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ enabled: nextState }),

@@ -1,0 +1,45 @@
+{
+  "id": "cmp_1777302184789",
+  "timestamp_ms": 1777302184789,
+  "labels": [
+    "sourceA/capture_001.bin",
+    "sourceA/capture_002.bin",
+    "sourceA/capture_003.bin"
+  ],
+  "pairs": [
+    {
+      "i": 0,
+      "j": 1,
+      "label_i": "sourceA/capture_001.bin",
+      "label_j": "sourceA/capture_002.bin",
+      "rmse": 78.32311255698201,
+      "correlation": 0.3644866281946556,
+      "alignment_lag_samples": 0,
+      "degradation_indicators": [
+        "Dominant frequency shifted from 247.5 Hz to 2.5 Hz"
+      ]
+    },
+    {
+      "i": 0,
+      "j": 2,
+      "label_i": "sourceA/capture_001.bin",
+      "label_j": "sourceA/capture_003.bin",
+      "rmse": 84.96597055860747,
+      "correlation": 0.28431791933415335,
+      "alignment_lag_samples": 0,
+      "degradation_indicators": []
+    },
+    {
+      "i": 1,
+      "j": 2,
+      "label_i": "sourceA/capture_002.bin",
+      "label_j": "sourceA/capture_003.bin",
+      "rmse": 83.46593570896805,
+      "correlation": 0.30801206918629126,
+      "alignment_lag_samples": 0,
+      "degradation_indicators": [
+        "Dominant frequency shifted from 2.5 Hz to 247.5 Hz"
+      ]
+    }
+  ]
+}

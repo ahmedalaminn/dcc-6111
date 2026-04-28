@@ -1,67 +1,194 @@
-## BBB demo flow
+# How to Run — SLB Distributed PubSub Network Logger
 
-On the BeagleBone Black:
+## Overview
 
-Terminal 1
-```bash
-cd /path/to/project2
-./run_bbb_broker.sh
+The system has three independent processes that work together:
+
+```
+publisher(s) ──pub──> broker <──sub── server ──SSE──> browser dashboard
+                (ZMQ proxy)     (Flask HTTP)
 ```
 
-Terminal 2
-```bash
-cd /path/to/project2
-./run_bbb_server.sh
-```
+All Python files live in `project2/python/`. Run commands from that directory unless noted otherwise.
 
-Open the dashboard from a Mac browser:
+---
 
-```text
-http://<bbb-ip>:5000
-```
+## Prerequisites
 
-On the MacBook, simulate publisher nodes:
-
-Terminal 3
-```bash
-cd /path/to/project2
-python3 python/publisher.py node-alpha --endpoint tcp://<bbb-ip>:5556
-```
-
-Terminal 4
-```bash
-cd /path/to/project2
-python3 python/publisher.py node-beta --endpoint tcp://<bbb-ip>:5556
-```
-
-Optional burst test:
+### BeagleBone Black (BBB)
 
 ```bash
-python3 python/publisher.py node-gamma --endpoint tcp://<bbb-ip>:5556 --interval 0.5 --count 40
+# System packages (one-time)
+sudo apt-get update
+sudo apt-get install -y python3 python3-pip python3-venv libzmq3-dev
+
+# Create and activate a virtual environment
+cd ~/dcc-6111/project2/python
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install Python dependencies
+pip install -r requirements.txt
 ```
 
-## Local Mac-only smoke test
+> **Python version:** Requires Python 3.8+. Check with `python3 --version`.  
+> BBB running Debian 11 (Bullseye) ships Python 3.9 and is fully supported.  
+> If you're on Debian 10 (Buster, Python 3.7), upgrade Python or use `pyenv`.
 
-Terminal 1
+### Development Machine (Linux / macOS / WSL)
+
 ```bash
-cd /path/to/project2/python
+cd project2/python
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+---
+
+## Running on the BeagleBone Black
+
+Open three SSH sessions (or `screen` / `tmux` panes) into the BBB.
+
+### Terminal 1 — ZMQ Broker
+
+```bash
+cd ~/dcc-6111/project2/python
+source .venv/bin/activate
 python3 broker.py
 ```
 
-Terminal 2
+Listens on:
+- `tcp://0.0.0.0:5555` — subscribers (server.py connects here)
+- `tcp://0.0.0.0:5556` — publishers (publisher.py connects here)
+
+### Terminal 2 — Flask Server
+
 ```bash
-cd /path/to/project2/python
-python3 server.py --endpoint tcp://127.0.0.1:5555
+cd ~/dcc-6111/project2/python
+source .venv/bin/activate
+python3 server.py --endpoint tcp://127.0.0.1:5555 --host 0.0.0.0 --port 5000
 ```
 
-Terminal 3
+Serves the dashboard at `http://<BBB-IP>:5000` from any browser on the same LAN.
+
+### Terminal 3+ — Publisher Node(s)
+
 ```bash
-cd /path/to/project2/python
-python3 publisher.py node-alpha --endpoint tcp://127.0.0.1:5556
+cd ~/dcc-6111/project2/python
+source .venv/bin/activate
+python3 publisher.py node-alpha
 ```
 
-Open:
+Run this in additional terminals (or on other machines) with different node names:
 
-```text
-http://127.0.0.1:5000
+```bash
+python3 publisher.py node-beta
+python3 publisher.py node-gamma
+```
+
+Publishers on **remote machines** must point to the BBB's IP:
+
+```bash
+python3 publisher.py node-remote --endpoint tcp://<BBB-IP>:5556
+```
+
+### View the Dashboard
+
+Open a browser on any machine on the same network:
+
+```
+http://<BBB-IP>:5000
+```
+
+To find the BBB's IP: `ip addr show` or `hostname -I`
+
+---
+
+## Demo Mode (No Publisher Needed)
+
+Generates synthetic node traffic without requiring a broker or any publishers. Useful for testing the UI in isolation.
+
+```bash
+python3 server.py --demo --host 0.0.0.0 --port 5000
+```
+
+Then open `http://<BBB-IP>:5000` (or `http://localhost:5000` locally).
+
+---
+
+## Running on a Dev Machine (Full Stack with React UI)
+
+For development you can run the React frontend instead of the Flask template UI.
+
+**Terminal 1 — Broker**
+```bash
+cd project2/python && source .venv/bin/activate
+python3 broker.py
+```
+
+**Terminal 2 — Server**
+```bash
+cd project2/python && source .venv/bin/activate
+python3 server.py --endpoint tcp://127.0.0.1:5555 --port 5001
+```
+
+> Note: The React dev proxy is hardcoded to port 5001.
+
+**Terminal 3 — Publisher**
+```bash
+cd project2/python && source .venv/bin/activate
+python3 publisher.py node-alpha
+```
+
+**Terminal 4 — React Frontend**
+```bash
+cd project2
+npm install   # first time only
+npm run dev
+```
+
+Open `http://localhost:5173`
+
+> The React UI is for development only — do not run Node.js or npm on the BBB.  
+> The Flask template at `http://<BBB-IP>:5000` is the recommended UI for BBB.
+
+---
+
+## server.py CLI Options
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--endpoint` | `tcp://127.0.0.1:5555` | ZMQ broker address to subscribe to |
+| `--topic` | `""` (all) | ZMQ topic filter (empty = receive all) |
+| `--host` | `0.0.0.0` | HTTP bind address |
+| `--port` | `5000` | HTTP port |
+| `--demo` | off | Use synthetic data instead of ZMQ |
+
+---
+
+## Tunable Parameters (server.py)
+
+| Constant | Default | Description |
+|----------|---------|-------------|
+| `MAX_NODES` | 5 | Max nodes tracked before rejecting new ones |
+| `NODE_TIMEOUT_S` | 10.0 | Seconds without a message before node is marked LOST |
+| `MAX_LOG_ROWS` | 200 | Max log entries kept in memory |
+| `SSE_HEARTBEAT_S` | 15.0 | Keepalive heartbeat interval for SSE connections |
+
+---
+
+## Firewall / Port Reference
+
+| Port | Protocol | Used By |
+|------|----------|---------|
+| 5555 | TCP | ZMQ XPUB — subscribers connect here |
+| 5556 | TCP | ZMQ XSUB — publishers connect here |
+| 5000 | TCP | Flask HTTP dashboard |
+
+On BBB with `ufw` enabled:
+```bash
+sudo ufw allow 5000/tcp
+sudo ufw allow 5555/tcp
+sudo ufw allow 5556/tcp
 ```

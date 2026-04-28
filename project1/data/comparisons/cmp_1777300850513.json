@@ -1,0 +1,20 @@
+{
+  "id": "cmp_1777300850513",
+  "timestamp_ms": 1777300850513,
+  "labels": [
+    "sourceA/capture_001.bin",
+    "sourceB/capture_002.bin"
+  ],
+  "pairs": [
+    {
+      "i": 0,
+      "j": 1,
+      "label_i": "sourceA/capture_001.bin",
+      "label_j": "sourceB/capture_002.bin",
+      "rmse": 93.85859081473008,
+      "correlation": 0.08211742909958047,
+      "alignment_lag_samples": 44,
+      "degradation_indicators": []
+    }
+  ]
+}

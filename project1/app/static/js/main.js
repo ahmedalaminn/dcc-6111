@@ -180,7 +180,7 @@ function renderFftChart() {
   // Use the already-loaded downsampled waveform data — no extra request needed
   if (!state.currentWaveformData) return;
   const samples = state.currentWaveformData.samples;
-  const sampleRate = state.currentWaveformData.sample_rate;
+  const sampleRate = state.currentWaveformData.display_sample_rate ?? state.currentWaveformData.sample_rate;
   const n = samples.length;
   const half = Math.floor(n / 2);
   const freqBinHz = sampleRate / n;

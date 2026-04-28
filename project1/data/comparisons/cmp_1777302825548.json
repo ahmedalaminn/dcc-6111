@@ -1,0 +1,22 @@
+{
+  "id": "cmp_1777302825548",
+  "timestamp_ms": 1777302825548,
+  "labels": [
+    "sourceB/capture_002.bin",
+    "sourceA/capture_002.bin"
+  ],
+  "pairs": [
+    {
+      "i": 0,
+      "j": 1,
+      "label_i": "sourceB/capture_002.bin",
+      "label_j": "sourceA/capture_002.bin",
+      "rmse": 93.92203284607004,
+      "correlation": 0.08109473411184819,
+      "alignment_lag_samples": -32,
+      "degradation_indicators": [
+        "Dominant frequency shifted from 246.9 Hz to 2.5 Hz"
+      ]
+    }
+  ]
+}
