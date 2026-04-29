@@ -53,7 +53,7 @@ Open three SSH sessions (or `screen` / `tmux` panes) into the BBB.
 ### Terminal 1 — ZMQ Broker
 
 ```bash
-$ cd pubsub-logger
+$ cd ~/dcc-6111/pubsub-logger
 $ ./run_bbb_broker.sh
 ```
 
@@ -64,7 +64,7 @@ Listens on:
 ### Terminal 2 — Flask Server
 
 ```bash
-$ cd pubsub-logger
+$ cd ~/dcc-6111/pubsub-logger
 $ ./run_bbb_server.sh
 ```
 
@@ -73,14 +73,19 @@ Serves the dashboard at `http://<BBB-IP>:5000` from any browser on the same LAN.
 ### Terminal 3+ — Publisher Node(s)
 
 ```bash
-$ cd pubsub-logger
+$ cd ~/dcc-6111/pubsub-logger
 $ python3 python/publisher.py node-alpha
 ```
 
 Run this in additional terminals (or on other machines) with different node names:
 
 ```bash
+$ cd ~/dcc-6111/pubsub-logger
 $ python3 python/publisher.py node-beta
+```
+
+```bash
+$ cd ~/dcc-6111/pubsub-logger
 $ python3 python/publisher.py node-gamma
 ```
 
