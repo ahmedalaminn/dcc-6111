@@ -1,5 +1,8 @@
 # Waveform Monitor and Comparator
 
+> **Version 1.0** — See [RELEASE_NOTES.md](RELEASE_NOTES.md) for features, bug fixes, and known issues.
+> For full installation instructions see [INSTALL.md](INSTALL.md).
+
 ## Overview
 
 The **Waveform Monitor and Comparator** is a lightweight Linux microservice designed to ingest, analyze, and compare waveform data over time. The system processes waveform captures in **binary format**, computes signal statistics, tracks signal behavior across captures, and detects potential degradation in waveform characteristics.
@@ -187,6 +190,8 @@ project1/
 ---
 
 # Installation
+
+> Full prerequisites, step-by-step instructions, and troubleshooting are in **[INSTALL.md](INSTALL.md)**.
 
 ## Requirements
 
