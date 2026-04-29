@@ -239,8 +239,8 @@ The BBB path is designed around the distro Python that ships with the board imag
 The web interface will be available at:
 
 ```text
-http://localhost:8000        # local
-http://<bbb-ip>:8000        # from another machine on the same network
+http://localhost:8080        # local
+http://<bbb-ip>:8080        # from another machine on the same network
 ```
 
 ### Environment overrides
@@ -255,10 +255,10 @@ http://<bbb-ip>:8000        # from another machine on the same network
 | `MAX_COMPARE_SAMPLES` | 50000 | Comparison sample cap |
 | `MAX_FILE_SIZE_MB` | 64 | Upload size limit |
 | `HOST` | 0.0.0.0 | Bind address |
-| `PORT` | 8000 | HTTP port |
+| `PORT` | 8080 | HTTP port |
 
 ```bash
-PORT=8080 ./run_bbb.sh
+PORT=8090 ./run_bbb.sh
 ```
 
 ---

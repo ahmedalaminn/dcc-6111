@@ -17,7 +17,7 @@ COPY . .
 
 RUN mkdir -p data/raw data/metrics data/comparisons data/reports
 
-EXPOSE 8000
+EXPOSE 8080
 
 # Resource-conscious defaults for BBB (512MB RAM)
 ENV MAX_SAMPLES=200000

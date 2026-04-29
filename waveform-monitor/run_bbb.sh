@@ -5,7 +5,8 @@ PROJECT_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 VENV_DIR="${PROJECT_ROOT}/.venv-bbb"
 
 export HOST="${HOST:-0.0.0.0}"
-export PORT="${PORT:-8000}"
+# Some BBB images already have a systemd-managed service on 8000.
+export PORT="${PORT:-8080}"
 export MAX_SAMPLES="${MAX_SAMPLES:-200000}"
 export MAX_FFT_SAMPLES="${MAX_FFT_SAMPLES:-131072}"
 export MAX_ALIGNMENT_SAMPLES="${MAX_ALIGNMENT_SAMPLES:-50000}"

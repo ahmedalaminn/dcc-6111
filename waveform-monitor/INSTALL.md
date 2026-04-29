@@ -204,8 +204,8 @@ python3 -m app.main
 The web interface is available at:
 
 ```
-http://localhost:8000          # from the same machine
-http://<device-ip>:8000       # from another machine on the same network
+http://localhost:8080          # from the same machine
+http://<device-ip>:8080       # from another machine on the same network
 ```
 
 ### Configuration
@@ -220,12 +220,12 @@ http://<device-ip>:8000       # from another machine on the same network
 | `MAX_COMPARE_SAMPLES` | 50000 | Comparison sample cap |
 | `MAX_FILE_SIZE_MB` | 64 | Upload size limit |
 | `HOST` | 0.0.0.0 | Bind address (0.0.0.0 = all interfaces) |
-| `PORT` | 8000 | HTTP port |
+| `PORT` | 8080 | HTTP port |
 
 Example — run on a non-default port:
 
 ```bash
-PORT=8080 ./run_bbb.sh
+PORT=8090 ./run_bbb.sh
 ```
 
 ### Running as a Background Service (BBB)
@@ -272,16 +272,16 @@ pip install -r requirements-bbb.txt
 
 ---
 
-### Port 8000 already in use
+### Port 8080 already in use
 
-Another process is occupying port 8000.
+Another process is occupying port 8080.
 
 ```bash
 # Find the process
-lsof -i :8000
+lsof -i :8080
 
 # Kill it, or start on a different port
-PORT=8080 ./run_bbb.sh
+PORT=8090 ./run_bbb.sh
 ```
 
 ---

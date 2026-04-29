@@ -21,7 +21,7 @@ This document covers the day-to-day use of the system: the web UI, the CLI, the 
 
 ## 1. Web UI Walkthrough
 
-Start the service (`./run_bbb.sh`) and open `http://<host>:8000` in a browser.
+Start the service (`./run_bbb.sh`) and open `http://<host>:8080` in a browser.
 
 The UI is divided into a **sidebar** and a **tab panel**.
 
@@ -74,12 +74,12 @@ waveform-cli ingest data/raw/sourceA/capture_001.bin \
 
 ```bash
 # WAVE v1 file
-curl -X POST http://localhost:8000/api/ingest \
+curl -X POST http://localhost:8080/api/ingest \
   -F "file=@capture_001.bin" \
   -F "source_id=sourceA"
 
 # Raw uint8 file
-curl -X POST http://localhost:8000/api/ingest \
+curl -X POST http://localhost:8080/api/ingest \
   -F "file=@capture_001.bin" \
   -F "format=raw" \
   -F "sample_rate=1000" \
@@ -158,12 +158,12 @@ waveform-cli report --source sourceA --comparison cmp_1777300885146
 ### Via curl
 
 ```bash
-curl -X POST http://localhost:8000/api/reports/generate \
+curl -X POST http://localhost:8080/api/reports/generate \
   -H "Content-Type: application/json" \
   -d '{"source_id": "sourceA"}'
 
 # With a comparison attached
-curl -X POST http://localhost:8000/api/reports/generate \
+curl -X POST http://localhost:8080/api/reports/generate \
   -H "Content-Type: application/json" \
   -d '{"source_id": "sourceA", "comparison_id": "cmp_1777300885146"}'
 ```
@@ -262,7 +262,7 @@ waveform-cli report --source <source_id> [--comparison <cmp_id>]
 
 ## 8. REST API Reference
 
-All endpoints return JSON. The base URL is `http://<host>:8000`.
+All endpoints return JSON. The base URL is `http://<host>:8080`.
 
 ### Sources and waveforms
 
@@ -423,7 +423,7 @@ This creates WAVE v1 files in `data/raw/sourceA/` (three 10 Hz sine captures wit
 
 ```bash
 ./run_bbb.sh
-# Open http://localhost:8000
+# Open http://localhost:8080
 ```
 
 ### Step 3 — Inspect a single capture

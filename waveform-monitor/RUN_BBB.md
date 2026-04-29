@@ -45,13 +45,13 @@ It uses the board's existing Debian `python3`, so you do not need a separate man
 The UI will be available at:
 
 ```text
-http://<bbb-ip>:8000
+http://<bbb-ip>:8080
 ```
 
 If you are running locally on the board itself:
 
 ```text
-http://127.0.0.1:8000
+http://127.0.0.1:8080
 ```
 
 To find the BBB IP address from the board:
@@ -62,13 +62,13 @@ hostname -I
 
 Use the non-loopback address shown there in place of `<bbb-ip>`.
 
-To check whether port `8000` is already in use:
+To check whether port `8080` is already in use:
 
 ```bash
-ss -ltn | grep :8000
+ss -ltn | grep :8080
 ```
 
-If that prints nothing, port `8000` is free.
+If that prints nothing, port `8080` is free.
 
 ## 4. Demo flow
 
@@ -109,13 +109,13 @@ MAX_ALIGNMENT_SAMPLES=50000
 MAX_COMPARE_SAMPLES=50000
 MAX_FILE_SIZE_MB=64
 HOST=0.0.0.0
-PORT=8000
+PORT=8080
 ```
 
 To override one temporarily:
 
 ```bash
-PORT=8080 ./run_bbb.sh
+PORT=8090 ./run_bbb.sh
 ```
 
 You normally do not edit `app/main.py` for this. `HOST` and `PORT` are read from the environment. If you want to change the default permanently, edit `run_bbb.sh`.
