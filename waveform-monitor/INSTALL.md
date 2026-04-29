@@ -20,7 +20,7 @@ The application has been validated on:
 
 | Requirement | Minimum Version | Download |
 |---|---|---|
-| Python | 3.9 | https://www.python.org/downloads/ |
+| Python | 3.9+ | https://www.python.org/downloads/ |
 | pip | 21.0 | Included with Python 3.9+; upgrade with `python3 -m pip install --upgrade pip` |
 | git | 2.x | https://git-scm.com/downloads |
 
@@ -39,19 +39,32 @@ The BBB deployment path uses the Debian-packaged `python3` that already ships wi
 - Debian 10 (Buster): Python 3.7
 - Debian 11 (Bullseye): Python 3.9
 
-You do not need to manually upgrade the board to `python3.9` just to run the service.
+You do not need a manual Python upgrade on the board to run the service.
 
 ---
 
 ## Dependent Libraries
 
-### Python packages (installed automatically by pip)
+### Local / Development dependency set (`requirements.txt`)
 
 | Library | Version | Purpose | Link |
 |---|---|---|---|
-| Flask | ≥ 2.2 | HTTP server and REST API | https://flask.palletsprojects.com/ |
-| NumPy | ≥ 1.21 | Signal processing, FFT, cross-correlation | https://numpy.org/ |
-| Jinja2 | ≥ 3.0 | HTML report templating | https://jinja.palletsprojects.com/ |
+| Flask | `>=2.3.0,<4.0` | HTTP server and REST API | https://flask.palletsprojects.com/ |
+| NumPy | `>=1.24.0,<3.0` | Signal processing, FFT, cross-correlation | https://numpy.org/ |
+| Jinja2 | `>=3.1.0,<4.0` | HTML report templating | https://jinja.palletsprojects.com/ |
+
+This is the laptop / workstation path used by `pip install -r requirements.txt`.
+
+### BeagleBone Black runtime dependency set (`requirements-bbb.txt`)
+
+| Library | Version source | Purpose |
+|---|---|---|
+| Python | Debian `python3` package | Base interpreter supplied by the board image |
+| NumPy | Debian `python3-numpy` package | Signal processing, FFT, cross-correlation |
+| Flask | `>=2.2.0,<2.3` | HTTP server and REST API |
+| Jinja2 | `>=3.1.0,<4.0` | HTML report templating |
+
+This is the board-safe runtime installed by `scripts/setup_bbb.sh`.
 
 No SciPy, no database, no message broker. All persistent state is stored as flat files (CSV, JSON, HTML).
 
@@ -84,7 +97,9 @@ cd dcc-6111-main/waveform-monitor
 
 ## Build Instructions
 
-This project is pure Python — no compilation step is required. The installation steps below create a virtual environment and install the Python dependencies, which is all that is needed before running.
+This project is pure Python — no compilation step is required. Choose the dependency path that matches your target:
+- local / dev machine: `requirements.txt`
+- BeagleBone Black: `scripts/setup_bbb.sh` and `requirements-bbb.txt`
 
 ---
 
@@ -246,11 +261,13 @@ Python 3 is not installed or not on the PATH.
 The virtual environment is not activated, or `pip install` was not run inside it.
 
 ```bash
-source venv/bin/activate          # dev machine
-# or
-source .venv-bbb/bin/activate     # BeagleBone Black
-
+# dev machine
+source venv/bin/activate
 pip install -r requirements.txt
+
+# BeagleBone Black
+source .venv-bbb/bin/activate
+pip install -r requirements-bbb.txt
 ```
 
 ---

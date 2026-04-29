@@ -4,7 +4,7 @@ set -eu
 # BBB-friendly setup path:
 # - uses Debian's python3-numpy package instead of compiling NumPy on device
 # - installs only the lightweight web/runtime dependencies into a venv
-# - keeps the BBB on its distro-provided python3 (Buster: 3.7, Bullseye: 3.9)
+# - keeps the BBB on its distro-provided python3 from the board image
 
 PROJECT_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 VENV_DIR="${PROJECT_ROOT}/.venv-bbb"

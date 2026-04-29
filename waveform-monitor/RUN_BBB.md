@@ -34,7 +34,7 @@ That script installs:
 
 It then creates `.venv-bbb` and installs the light Python web dependencies.
 
-It uses the board's existing Debian `python3`, so you do not need a separate manual upgrade to `python3.9`.
+It uses the board's existing Debian `python3`, so you do not need a separate manual Python upgrade on the board.
 
 ## 3. Start the service
 
