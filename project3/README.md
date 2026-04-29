@@ -1,4 +1,7 @@
-# Project 3 - Git Fork Monitor
+# Project 3 — Git Fork Monitor
+
+> **Version 1.0** — See [RELEASE_NOTES.md](RELEASE_NOTES.md) for features, bug fixes, and known issues.
+> For full installation instructions see [INSTALL.md](INSTALL.md).
 
 ## GitHub Login Setup
 

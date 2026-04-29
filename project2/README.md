@@ -1,4 +1,7 @@
-# Project 2 — BBB Logger Runtime
+# Project 2 — SLB Distributed PubSub Network Logger
+
+> **Version 1.0** — See [RELEASE_NOTES.md](RELEASE_NOTES.md) for features, bug fixes, and known issues.
+> For full installation instructions see [INSTALL.md](INSTALL.md).
 
 This temp copy is tuned for the BeagleBone Black deployment path:
 
