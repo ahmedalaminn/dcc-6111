@@ -7,6 +7,8 @@ See the [Installation Guide](https://github.com/ahmedalaminn/dcc-6111/blob/main/
 
 ## Projects
 
-- [Project 1 — Waveform Monitor and Comparator](waveform-monitor/README.md)
-- [Project 2 — SLB Distributed PubSub Network Logger](pubsub-logger/README.md)
-- [Project 3 — Git Fork Monitor](git-fork-monitor/README.md)
+| Project | README | Release Notes (Features · Bugs · Known Issues) |
+|---|---|---|
+| Waveform Monitor and Comparator | [README](waveform-monitor/README.md) | [RELEASE_NOTES](waveform-monitor/RELEASE_NOTES.md) |
+| SLB Distributed PubSub Network Logger | [README](pubsub-logger/README.md) | [RELEASE_NOTES](pubsub-logger/RELEASE_NOTES.md) |
+| Git Fork Monitor | [README](git-fork-monitor/README.md) | [RELEASE_NOTES](git-fork-monitor/RELEASE_NOTES.md) |
