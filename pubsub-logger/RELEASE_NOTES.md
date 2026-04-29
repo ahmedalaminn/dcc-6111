@@ -36,7 +36,7 @@ This is the first release. The following primary features were developed by the 
 - The generated binding (`proto/log_message_pb2.py`) is a lightweight local stub — the `google-protobuf` package is **not** required at runtime, keeping the dependency footprint small on the BBB.
 
 ### React Frontend (Development Only)
-- A Vite + React UI (`project2/src/`) provides a richer development-time dashboard experience.
+- A Vite + React UI (`pubsub-logger/src/`) provides a richer development-time dashboard experience.
 - The React app proxies API calls to the Flask server on port 5001.
 - **This frontend is for development only and must not be installed on the BeagleBone Black.**
 

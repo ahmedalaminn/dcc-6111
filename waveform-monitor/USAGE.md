@@ -413,7 +413,7 @@ This walks through a complete workflow: generate test data, load it, compare cap
 ### Step 1 — Generate test waveforms
 
 ```bash
-cd project1
+cd waveform-monitor
 python3 scripts/generate_test_waveform.py --generate-default-set
 ```
 

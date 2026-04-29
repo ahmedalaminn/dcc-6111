@@ -67,14 +67,14 @@ Clone the repository from GitHub:
 
 ```bash
 git clone https://github.com/ahmedalaminn/dcc-6111.git
-cd dcc-6111/project2
+cd dcc-6111/pubsub-logger
 ```
 
 If you do not have git, download a ZIP archive from the repository's GitHub page using **Code → Download ZIP**, then extract it:
 
 ```bash
 unzip dcc-6111-main.zip
-cd dcc-6111-main/project2
+cd dcc-6111-main/pubsub-logger
 ```
 
 ---
@@ -86,7 +86,7 @@ This project is pure Python on the backend — no compilation step is required f
 ### React frontend build (optional, development only)
 
 ```bash
-cd project2
+cd pubsub-logger
 npm install
 npm run build   # outputs to dist/
 ```
@@ -102,7 +102,7 @@ npm run build   # outputs to dist/
 From your development machine:
 
 ```bash
-scp -r dcc-6111/project2 debian@<bbb-ip>:~/project2
+scp -r dcc-6111/pubsub-logger debian@<bbb-ip>:~/pubsub-logger
 ```
 
 Or clone directly on the BBB if internet is available:
@@ -110,7 +110,7 @@ Or clone directly on the BBB if internet is available:
 ```bash
 ssh debian@<bbb-ip>
 git clone https://github.com/ahmedalaminn/dcc-6111.git
-cd dcc-6111/project2/python
+cd dcc-6111/pubsub-logger/python
 ```
 
 #### Step 2 — Install system packages (preferred method)
@@ -135,7 +135,7 @@ If the Debian packages are available, you can skip the pip steps below.
 If the Debian packages are not available or you need a specific version:
 
 ```bash
-cd ~/dcc-6111/project2/python
+cd ~/dcc-6111/pubsub-logger/python
 python3 -m venv .venv
 source .venv/bin/activate
 pip install --no-cache-dir -r requirements.txt
@@ -152,7 +152,7 @@ chmod +x run_bbb_broker.sh run_bbb_server.sh
 ### Development Machine Installation
 
 ```bash
-cd dcc-6111/project2/python
+cd dcc-6111/pubsub-logger/python
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -161,7 +161,7 @@ pip install -r requirements.txt
 For the React frontend:
 
 ```bash
-cd dcc-6111/project2
+cd dcc-6111/pubsub-logger
 npm install
 ```
 
@@ -176,14 +176,14 @@ Open three SSH sessions into the BBB (or use `screen` / `tmux`).
 **Terminal 1 — ZMQ Broker**
 
 ```bash
-cd ~/dcc-6111/project2
+cd ~/dcc-6111/pubsub-logger
 ./run_bbb_broker.sh
 ```
 
 Or manually:
 
 ```bash
-cd ~/dcc-6111/project2/python
+cd ~/dcc-6111/pubsub-logger/python
 source .venv/bin/activate
 python3 broker.py
 ```
@@ -195,14 +195,14 @@ Listens on:
 **Terminal 2 — Flask Dashboard Server**
 
 ```bash
-cd ~/dcc-6111/project2
+cd ~/dcc-6111/pubsub-logger
 ./run_bbb_server.sh
 ```
 
 Or manually:
 
 ```bash
-cd ~/dcc-6111/project2/python
+cd ~/dcc-6111/pubsub-logger/python
 source .venv/bin/activate
 python3 server.py --endpoint tcp://127.0.0.1:5555 --host 0.0.0.0 --port 5000
 ```
@@ -252,16 +252,16 @@ Run four processes in separate terminals:
 
 ```bash
 # Terminal 1 — Broker
-cd project2/python && source .venv/bin/activate && python3 broker.py
+cd pubsub-logger/python && source .venv/bin/activate && python3 broker.py
 
 # Terminal 2 — Flask server (must be port 5001 for React proxy)
-cd project2/python && source .venv/bin/activate && python3 server.py --endpoint tcp://127.0.0.1:5555 --port 5001
+cd pubsub-logger/python && source .venv/bin/activate && python3 server.py --endpoint tcp://127.0.0.1:5555 --port 5001
 
 # Terminal 3 — Publisher
-cd project2/python && source .venv/bin/activate && python3 publisher.py node-alpha
+cd pubsub-logger/python && source .venv/bin/activate && python3 publisher.py node-alpha
 
 # Terminal 4 — React dev server
-cd project2 && npm run dev
+cd pubsub-logger && npm run dev
 ```
 
 Open `http://localhost:5173`

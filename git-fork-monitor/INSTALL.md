@@ -71,14 +71,14 @@ Clone the repository from GitHub:
 
 ```bash
 git clone https://github.com/ahmedalaminn/dcc-6111.git
-cd dcc-6111/project3
+cd dcc-6111/git-fork-monitor
 ```
 
 If you do not have git, download a ZIP archive from the repository's GitHub page using **Code → Download ZIP**, then extract it:
 
 ```bash
 unzip dcc-6111-main.zip
-cd dcc-6111-main/project3
+cd dcc-6111-main/git-fork-monitor
 ```
 
 ---
@@ -104,7 +104,7 @@ This compiles the Next.js application and outputs optimized assets. Required bef
 ### Step 1 — Install Node.js dependencies
 
 ```bash
-cd dcc-6111/project3
+cd dcc-6111/git-fork-monitor
 npm install
 ```
 
@@ -112,10 +112,10 @@ This installs all packages listed in `package.json` into `node_modules/`. It may
 
 ### Step 2 — Create the environment variable file
 
-Create a file named `.env.local` in the `project3/` directory. This file is not committed to git and must be created manually on each machine.
+Create a file named `.env.local` in the `git-fork-monitor/` directory. This file is not committed to git and must be created manually on each machine.
 
 ```bash
-# project3/.env.local
+# git-fork-monitor/.env.local
 
 GITHUB_CLIENT_ID=your_github_oauth_client_id
 GITHUB_CLIENT_SECRET=your_github_oauth_client_secret
@@ -141,7 +141,7 @@ Replace the placeholders:
 ### Development mode
 
 ```bash
-cd dcc-6111/project3
+cd dcc-6111/git-fork-monitor
 npm run dev
 ```
 

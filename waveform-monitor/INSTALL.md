@@ -64,14 +64,14 @@ Clone the repository from GitHub:
 
 ```bash
 git clone https://github.com/ahmedalaminn/dcc-6111.git
-cd dcc-6111/project1
+cd dcc-6111/waveform-monitor
 ```
 
 If you do not have git, you can download a ZIP archive from the repository's GitHub page using the **Code → Download ZIP** button, then extract it:
 
 ```bash
 unzip dcc-6111-main.zip
-cd dcc-6111-main/project1
+cd dcc-6111-main/waveform-monitor
 ```
 
 ---
@@ -129,7 +129,7 @@ This writes synthetic WAVE v1 `.bin` files to `data/raw/sourceA/` and `data/raw/
 From your development machine (replace `192.168.1.x` with your BBB's IP address):
 
 ```bash
-scp -r dcc-6111/project1 debian@192.168.1.x:~/project1
+scp -r dcc-6111/waveform-monitor debian@192.168.1.x:~/waveform-monitor
 ```
 
 Or clone directly on the BBB if internet is available:
@@ -137,7 +137,7 @@ Or clone directly on the BBB if internet is available:
 ```bash
 ssh debian@192.168.1.x
 git clone https://github.com/ahmedalaminn/dcc-6111.git
-cd dcc-6111/project1
+cd dcc-6111/waveform-monitor
 ```
 
 #### Step 2 — Run the setup script
@@ -291,7 +291,7 @@ pip download -r requirements.txt -d ./wheelhouse
 # Transfer and install on BBB
 scp -r wheelhouse debian@<bbb-ip>:~/wheelhouse
 ssh debian@<bbb-ip>
-pip install --no-index --find-links=~/wheelhouse -r ~/project1/requirements.txt
+pip install --no-index --find-links=~/wheelhouse -r ~/waveform-monitor/requirements.txt
 ```
 
 ---

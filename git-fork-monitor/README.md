@@ -16,7 +16,7 @@ In GitHub settings, create an OAuth app with:
 
 ### 2. Add local environment variables 
 
-Create `project3/.env.local` with:
+Create `git-fork-monitor/.env.local` with:
 
 ```bash
 GITHUB_CLIENT_ID=your_github_oauth_client_id

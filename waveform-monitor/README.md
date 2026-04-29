@@ -149,7 +149,7 @@ Binary Waveform Input (.bin)
 # Project Structure
 
 ```text
-project1/
+waveform-monitor/
 │
 ├── app/
 │   ├── api/          # REST endpoints
@@ -202,7 +202,7 @@ project1/
 
 ```bash
 git clone https://github.com/ahmedalaminn/dcc-6111.git
-cd dcc-6111/project1
+cd dcc-6111/waveform-monitor
 
 python3 -m venv venv
 source venv/bin/activate

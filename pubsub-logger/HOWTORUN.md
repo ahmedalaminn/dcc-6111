@@ -9,7 +9,7 @@ publisher(s) ──pub──> broker <──sub── server ──SSE──> br
                 (ZMQ proxy)     (Flask HTTP)
 ```
 
-All Python files live in `project2/python/`. Run commands from that directory unless noted otherwise.
+All Python files live in `pubsub-logger/python/`. Run commands from that directory unless noted otherwise.
 
 ---
 
@@ -23,7 +23,7 @@ sudo apt-get update
 sudo apt-get install -y python3 python3-pip python3-venv libzmq3-dev
 
 # Create and activate a virtual environment
-cd ~/dcc-6111/project2/python
+cd ~/dcc-6111/pubsub-logger/python
 python3 -m venv .venv
 source .venv/bin/activate
 
@@ -38,7 +38,7 @@ pip install -r requirements.txt
 ### Development Machine (Linux / macOS / WSL)
 
 ```bash
-cd project2/python
+cd pubsub-logger/python
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -53,7 +53,7 @@ Open three SSH sessions (or `screen` / `tmux` panes) into the BBB.
 ### Terminal 1 — ZMQ Broker
 
 ```bash
-cd ~/dcc-6111/project2/python
+cd ~/dcc-6111/pubsub-logger/python
 source .venv/bin/activate
 python3 broker.py
 ```
@@ -65,7 +65,7 @@ Listens on:
 ### Terminal 2 — Flask Server
 
 ```bash
-cd ~/dcc-6111/project2/python
+cd ~/dcc-6111/pubsub-logger/python
 source .venv/bin/activate
 python3 server.py --endpoint tcp://127.0.0.1:5555 --host 0.0.0.0 --port 5000
 ```
@@ -75,7 +75,7 @@ Serves the dashboard at `http://<BBB-IP>:5000` from any browser on the same LAN.
 ### Terminal 3+ — Publisher Node(s)
 
 ```bash
-cd ~/dcc-6111/project2/python
+cd ~/dcc-6111/pubsub-logger/python
 source .venv/bin/activate
 python3 publisher.py node-alpha
 ```
@@ -123,13 +123,13 @@ For development you can run the React frontend instead of the Flask template UI.
 
 **Terminal 1 — Broker**
 ```bash
-cd project2/python && source .venv/bin/activate
+cd pubsub-logger/python && source .venv/bin/activate
 python3 broker.py
 ```
 
 **Terminal 2 — Server**
 ```bash
-cd project2/python && source .venv/bin/activate
+cd pubsub-logger/python && source .venv/bin/activate
 python3 server.py --endpoint tcp://127.0.0.1:5555 --port 5001
 ```
 
@@ -137,13 +137,13 @@ python3 server.py --endpoint tcp://127.0.0.1:5555 --port 5001
 
 **Terminal 3 — Publisher**
 ```bash
-cd project2/python && source .venv/bin/activate
+cd pubsub-logger/python && source .venv/bin/activate
 python3 publisher.py node-alpha
 ```
 
 **Terminal 4 — React Frontend**
 ```bash
-cd project2
+cd pubsub-logger
 npm install   # first time only
 npm run dev
 ```
