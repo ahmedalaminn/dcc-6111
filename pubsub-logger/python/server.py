@@ -24,6 +24,7 @@ import argparse
 import json
 import queue
 import random
+import socket
 import threading
 import time
 from datetime import datetime
@@ -59,6 +60,22 @@ _node_lock             = threading.Lock()
 # Per-SSE-client queues  (queue.Queue[tuple[str, dict]])
 _clients: list         = []
 _clients_lock          = threading.Lock()
+
+
+def _display_host(bind_host: str) -> str:
+    """Return a user-friendly host for startup logs."""
+    if bind_host not in ("0.0.0.0", "::"):
+        return bind_host
+
+    # Use a UDP socket trick to determine the primary outbound LAN IP.
+    probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        probe.connect(("8.8.8.8", 80))
+        return probe.getsockname()[0]
+    except OSError:
+        return "127.0.0.1"
+    finally:
+        probe.close()
 
 
 # -- Broadcast helpers ----------------------------------------------------------
@@ -305,8 +322,9 @@ def main() -> None:
         name="NodeWatchdog", daemon=True,
     ).start()
 
-    print(f"[server] Dashboard -> http://localhost:{args.port}")
-    print(f"[server] LAN access -> http://<this-device-ip>:{args.port}")
+    shown_host = _display_host(args.host)
+    print(f"[server] Dashboard -> http://{shown_host}:{args.port}")
+    print(f"[server] LAN access -> http://{shown_host}:{args.port}")
 
     try:
         # threaded=True: each SSE client and each API call gets a thread

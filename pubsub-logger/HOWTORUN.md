@@ -19,16 +19,16 @@ All Python files live in `pubsub-logger/python/`. Run commands from that directo
 
 ```bash
 # System packages (one-time)
-sudo apt-get update
-sudo apt-get install -y python3 python3-pip python3-venv libzmq3-dev
+$ sudo apt-get update
+$ sudo apt-get install -y python3 python3-pip python3-venv libzmq3-dev
 
 # Create and activate a virtual environment
-cd ~/dcc-6111/pubsub-logger/python
-python3 -m venv .venv
-source .venv/bin/activate
+$ cd pubsub-logger/python
+$ python3 -m venv .venv
+$ source .venv/bin/activate
 
 # Install Python dependencies
-pip install -r requirements.txt
+$ pip install -r requirements.txt
 ```
 
 > **Python version:** Requires Python 3.8+. Check with `python3 --version`.  
@@ -38,10 +38,10 @@ pip install -r requirements.txt
 ### Development Machine (Linux / macOS / WSL)
 
 ```bash
-cd pubsub-logger/python
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+$ cd pubsub-logger/python
+$ python3 -m venv .venv
+$ source .venv/bin/activate
+$ pip install -r requirements.txt
 ```
 
 ---
@@ -53,9 +53,8 @@ Open three SSH sessions (or `screen` / `tmux` panes) into the BBB.
 ### Terminal 1 — ZMQ Broker
 
 ```bash
-cd ~/dcc-6111/pubsub-logger/python
-source .venv/bin/activate
-python3 broker.py
+$ cd pubsub-logger
+$ ./run_bbb_broker.sh
 ```
 
 Listens on:
@@ -65,9 +64,8 @@ Listens on:
 ### Terminal 2 — Flask Server
 
 ```bash
-cd ~/dcc-6111/pubsub-logger/python
-source .venv/bin/activate
-python3 server.py --endpoint tcp://127.0.0.1:5555 --host 0.0.0.0 --port 5000
+$ cd pubsub-logger
+$ ./run_bbb_server.sh
 ```
 
 Serves the dashboard at `http://<BBB-IP>:5000` from any browser on the same LAN.
@@ -75,22 +73,21 @@ Serves the dashboard at `http://<BBB-IP>:5000` from any browser on the same LAN.
 ### Terminal 3+ — Publisher Node(s)
 
 ```bash
-cd ~/dcc-6111/pubsub-logger/python
-source .venv/bin/activate
-python3 publisher.py node-alpha
+$ cd pubsub-logger
+$ python3 python/publisher.py node-alpha
 ```
 
 Run this in additional terminals (or on other machines) with different node names:
 
 ```bash
-python3 publisher.py node-beta
-python3 publisher.py node-gamma
+$ python3 python/publisher.py node-beta
+$ python3 python/publisher.py node-gamma
 ```
 
 Publishers on **remote machines** must point to the BBB's IP:
 
 ```bash
-python3 publisher.py node-remote --endpoint tcp://<BBB-IP>:5556
+$ python3 python/publisher.py node-remote --endpoint tcp://<BBB-IP>:5556
 ```
 
 ### View the Dashboard
@@ -110,7 +107,7 @@ To find the BBB's IP: `ip addr show` or `hostname -I`
 Generates synthetic node traffic without requiring a broker or any publishers. Useful for testing the UI in isolation.
 
 ```bash
-python3 server.py --demo --host 0.0.0.0 --port 5000
+$ python3 server.py --demo --host 0.0.0.0 --port 5000
 ```
 
 Then open `http://<BBB-IP>:5000` (or `http://localhost:5000` locally).
@@ -150,7 +147,7 @@ Then open `http://<BBB-IP>:5000` (or `http://localhost:5000` locally).
 
 On BBB with `ufw` enabled:
 ```bash
-sudo ufw allow 5000/tcp
-sudo ufw allow 5555/tcp
-sudo ufw allow 5556/tcp
+$ sudo ufw allow 5000/tcp
+$ sudo ufw allow 5555/tcp
+$ sudo ufw allow 5556/tcp
 ```
