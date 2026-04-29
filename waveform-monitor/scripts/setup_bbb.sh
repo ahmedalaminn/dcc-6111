@@ -4,6 +4,7 @@ set -eu
 # BBB-friendly setup path:
 # - uses Debian's python3-numpy package instead of compiling NumPy on device
 # - installs only the lightweight web/runtime dependencies into a venv
+# - keeps the BBB on its distro-provided python3 (Buster: 3.7, Bullseye: 3.9)
 
 PROJECT_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 VENV_DIR="${PROJECT_ROOT}/.venv-bbb"
@@ -16,7 +17,8 @@ echo "[bbb] Creating virtual environment at ${VENV_DIR}..."
 python3 -m venv --system-site-packages "${VENV_DIR}"
 
 echo "[bbb] Installing Flask/Jinja runtime requirements..."
-"${VENV_DIR}/bin/pip" install --upgrade pip
+# Leave Debian's packaged pip in place. Upgrading pip on older BBB images can
+# pull a newer pip that no longer supports the board's system Python.
 "${VENV_DIR}/bin/pip" install -r "${PROJECT_ROOT}/requirements-bbb.txt"
 
 cat <<EOF

@@ -35,6 +35,12 @@ git --version
 
 The BBB setup script handles all system-level dependencies automatically (see [BeagleBone Black Installation](#beaglebone-black-installation) below). No manual pre-installation is required beyond a working Debian image and internet connectivity.
 
+The BBB deployment path uses the Debian-packaged `python3` that already ships with the board image:
+- Debian 10 (Buster): Python 3.7
+- Debian 11 (Bullseye): Python 3.9
+
+You do not need to manually upgrade the board to `python3.9` just to run the service.
+
 ---
 
 ## Dependent Libraries
@@ -150,7 +156,7 @@ chmod +x scripts/setup_bbb.sh run_bbb.sh scripts/reset_demo_state.sh
 This script:
 - Installs `python3`, `python3-venv`, `python3-pip`, and `python3-numpy` from the Debian package repository via `apt` (uses the OS-provided NumPy to avoid compiling native extensions on-device).
 - Creates a `.venv-bbb` virtual environment.
-- Installs Flask and Jinja2 from PyPI inside that environment.
+- Installs the BBB-safe Flask/Jinja2 pins from `requirements-bbb.txt` inside that environment.
 
 The script requires `sudo` for the `apt install` step and will prompt for the `debian` user password (default: `temppwd`).
 
@@ -286,13 +292,32 @@ If the BBB has no internet, pre-install the packages on a connected machine and 
 
 ```bash
 # On dev machine
-pip download -r requirements.txt -d ./wheelhouse
+pip download -r requirements-bbb.txt -d ./wheelhouse
 
 # Transfer and install on BBB
 scp -r wheelhouse debian@<bbb-ip>:~/wheelhouse
 ssh debian@<bbb-ip>
-pip install --no-index --find-links=~/wheelhouse -r ~/waveform-monitor/requirements.txt
+pip install --no-index --find-links=~/wheelhouse -r ~/waveform-monitor/requirements-bbb.txt
 ```
+
+### `pip install -r requirements.txt` fails on the BBB or asks for newer Python
+
+`requirements.txt` is the development-machine dependency set. On older BBB images it may resolve package versions that require newer Python than the board ships with.
+
+Use the BBB runtime path instead:
+
+```bash
+./scripts/setup_bbb.sh
+```
+
+Or, if the virtual environment already exists:
+
+```bash
+source .venv-bbb/bin/activate
+pip install -r requirements-bbb.txt
+```
+
+Do not replace the board's system Python just to run `waveform-monitor`; the BBB path is intended to work with Debian 10/Buster and Debian 11/Bullseye as-is.
 
 ---
 

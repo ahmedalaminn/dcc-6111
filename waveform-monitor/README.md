@@ -195,8 +195,8 @@ waveform-monitor/
 
 ## Requirements
 
-- Python 3.9+
-- pip
+- Local / dev: Python 3.9+ and pip
+- BeagleBone Black: use `scripts/setup_bbb.sh` with the board's Debian-provided `python3`
 
 ## Local / Dev Setup
 
@@ -223,6 +223,8 @@ chmod +x scripts/setup_bbb.sh run_bbb.sh scripts/reset_demo_state.sh
 ```
 
 This installs `python3`, `python3-venv`, `python3-pip`, and `python3-numpy` via `apt`, then creates a `.venv-bbb` virtual environment and installs the light Python web dependencies. See [`RUN_BBB.md`](RUN_BBB.md) for the full deployment guide.
+
+The BBB path is designed around the distro Python that ships with the board image. Do not replace the system interpreter or install `requirements.txt` on the board just to reach Python 3.9; use `requirements-bbb.txt` through `scripts/setup_bbb.sh` instead.
 
 ---
 
