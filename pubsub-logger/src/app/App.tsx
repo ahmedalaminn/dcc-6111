@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
+const MAX_LOG_MESSAGES = 500;
+
 interface Node {
   id: string;
   status: "connected" | "disconnected";
@@ -65,7 +67,13 @@ export default function App() {
         payload: data.payload,
       };
 
-      setLogMessages((prev) => [...prev, nextMessage]);
+      setLogMessages((prev) => {
+        const next = [...prev, nextMessage];
+        if (next.length > MAX_LOG_MESSAGES) {
+          return next.slice(next.length - MAX_LOG_MESSAGES);
+        }
+        return next;
+      });
 
       setNodes((prevNodes) => {
         const existingIndex = prevNodes.findIndex((node) => node.id === data.node_id);

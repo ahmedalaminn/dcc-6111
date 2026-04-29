@@ -30,10 +30,8 @@ The system is designed as a distributed deployment:
 |---|---|---|
 | Python | 3.8+ | https://www.python.org/downloads/ |
 | pip | any | Included with Python |
-| Node.js | 18+ (React frontend only) | https://nodejs.org/en/download |
-| npm | 9+ (React frontend only) | Included with Node.js |
-
-> The React frontend is **optional** and only needed during development. The Flask template UI (`templates/index.html`) is the recommended interface for the BBB deployment.
+| Node.js | Not required | n/a |
+| npm | Not required | n/a |
 
 ---
 
@@ -48,18 +46,6 @@ The system is designed as a distributed deployment:
 
 No `protobuf` package is required. The protobuf binding (`proto/log_message_pb2.py`) is a lightweight local stub included in the repository.
 
-### Node.js packages (development React frontend only)
-
-Installed automatically by `npm install`. Key dependencies:
-
-| Library | Purpose |
-|---|---|
-| React 18 | UI framework |
-| Vite | Development bundler and dev server |
-| MUI / Radix UI | Component library |
-| Recharts | Dashboard charting |
-
----
 
 ## Download Instructions
 
@@ -81,15 +67,7 @@ cd dcc-6111-main/pubsub-logger
 
 ## Build Instructions
 
-This project is pure Python on the backend — no compilation step is required for the server or broker. The React frontend requires a build step only if you intend to serve a production bundle (not needed for the BBB deployment).
-
-### React frontend build (optional, development only)
-
-```bash
-cd pubsub-logger
-npm install
-npm run build   # outputs to dist/
-```
+This project is Python-only for deployment and runtime. No frontend build step is required.
 
 ---
 
@@ -158,14 +136,6 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-For the React frontend:
-
-```bash
-cd dcc-6111/pubsub-logger
-npm install
-```
-
----
 
 ## Run Instructions
 
@@ -246,27 +216,6 @@ Generates synthetic node traffic and serves the dashboard. Useful for verifying 
 
 ---
 
-### Full Dev Stack with React Frontend (Development Machine)
-
-Run four processes in separate terminals:
-
-```bash
-# Terminal 1 — Broker
-cd pubsub-logger/python && source .venv/bin/activate && python3 broker.py
-
-# Terminal 2 — Flask server (must be port 5001 for React proxy)
-cd pubsub-logger/python && source .venv/bin/activate && python3 server.py --endpoint tcp://127.0.0.1:5555 --port 5001
-
-# Terminal 3 — Publisher
-cd pubsub-logger/python && source .venv/bin/activate && python3 publisher.py node-alpha
-
-# Terminal 4 — React dev server
-cd pubsub-logger && npm run dev
-```
-
-Open `http://localhost:5173`
-
----
 
 ### server.py CLI Options
 
@@ -341,11 +290,6 @@ The publisher is not sending messages within the 10-second timeout. Check:
 
 ---
 
-### React dev server shows `ECONNREFUSED` / proxy errors
-
-The Flask server must be running on port 5001 for the React proxy to work. Start it with `--port 5001`.
-
----
 
 ### `Permission denied` on `run_bbb_broker.sh` or `run_bbb_server.sh`
 

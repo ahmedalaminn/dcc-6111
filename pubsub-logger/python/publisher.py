@@ -8,7 +8,7 @@ from proto.log_message_pb2 import LogMessage
 DEFAULT_ENDPOINT = "tcp://127.0.0.1:5556"
 DEFAULT_INTERVAL_S = 2.0
 DEFAULT_TOPIC = "diag"
-DEFAULT_SNDHWM = 100
+DEFAULT_SNDHWM = 32
 
 
 def run_publisher(

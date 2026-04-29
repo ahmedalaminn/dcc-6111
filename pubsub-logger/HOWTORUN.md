@@ -117,44 +117,6 @@ Then open `http://<BBB-IP>:5000` (or `http://localhost:5000` locally).
 
 ---
 
-## Running on a Dev Machine (Full Stack with React UI)
-
-For development you can run the React frontend instead of the Flask template UI.
-
-**Terminal 1 — Broker**
-```bash
-cd pubsub-logger/python && source .venv/bin/activate
-python3 broker.py
-```
-
-**Terminal 2 — Server**
-```bash
-cd pubsub-logger/python && source .venv/bin/activate
-python3 server.py --endpoint tcp://127.0.0.1:5555 --port 5001
-```
-
-> Note: The React dev proxy is hardcoded to port 5001.
-
-**Terminal 3 — Publisher**
-```bash
-cd pubsub-logger/python && source .venv/bin/activate
-python3 publisher.py node-alpha
-```
-
-**Terminal 4 — React Frontend**
-```bash
-cd pubsub-logger
-npm install   # first time only
-npm run dev
-```
-
-Open `http://localhost:5173`
-
-> The React UI is for development only — do not run Node.js or npm on the BBB.  
-> The Flask template at `http://<BBB-IP>:5000` is the recommended UI for BBB.
-
----
-
 ## server.py CLI Options
 
 | Flag | Default | Description |

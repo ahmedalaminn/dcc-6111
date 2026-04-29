@@ -3,8 +3,8 @@ server.py
 ---------
 Flask web server for the SLB Distributed PubSub Network Logger.
 
-Replaces the DearPyGui frontend with a browser-based dashboard served over
-HTTP. Compatible with headless BeagleBone Black (no OpenGL/display required).
+Serves the browser-based dashboard over HTTP.
+Compatible with headless BeagleBone Black deployments.
 
 Routes
 ------
@@ -42,8 +42,8 @@ MAX_NODES             = 5
 NODE_TIMEOUT_S        = 10.0
 NODE_CHECK_INTERVAL_S = 1.0
 SSE_HEARTBEAT_S       = 15.0   # keep connection alive through NAT/proxies
-CLIENT_QUEUE_DEPTH    = 128
-INGEST_QUEUE_DEPTH    = 128
+CLIENT_QUEUE_DEPTH    = 64
+INGEST_QUEUE_DEPTH    = 64
 
 # -- Flask app ------------------------------------------------------------------
 app = Flask(__name__)

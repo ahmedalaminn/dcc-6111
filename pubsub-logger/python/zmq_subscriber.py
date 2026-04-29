@@ -8,7 +8,7 @@ from proto.log_message_pb2 import LogMessage
 
 RECONNECT_DELAY_S = 2.0
 RECV_TIMEOUT_MS   = 500
-RECV_HWM          = 200
+RECV_HWM          = 64
 
 class ZmqSubscriber(threading.Thread):
     def __init__(self, endpoint: str, topic: bytes, out_queue: queue.Queue) -> None:

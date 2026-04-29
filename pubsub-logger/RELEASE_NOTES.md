@@ -35,11 +35,6 @@ This is the first release. The following primary features were developed by the 
 - Messages are serialized using a minimal Protocol Buffer schema (`proto/log_message.proto`).
 - The generated binding (`proto/log_message_pb2.py`) is a lightweight local stub — the `google-protobuf` package is **not** required at runtime, keeping the dependency footprint small on the BBB.
 
-### React Frontend (Development Only)
-- A Vite + React UI (`pubsub-logger/src/`) provides a richer development-time dashboard experience.
-- The React app proxies API calls to the Flask server on port 5001.
-- **This frontend is for development only and must not be installed on the BeagleBone Black.**
-
 ### BeagleBone Black Deployment Support
 - `run_bbb_broker.sh` and `run_bbb_server.sh` start the broker and server with BBB-safe defaults.
 - Dependencies can be installed from Debian packages (`apt-get install python3-flask python3-zmq`) to avoid native compilation on-device.
@@ -64,6 +59,5 @@ The following bugs were identified and resolved during development:
 |---|---|---|---|
 | 1 | **Node count is capped at 5** — new publisher nodes are silently rejected when 5 are already tracked | Attempting to add a sixth node while five are active does not produce an error visible in the browser | Increase `MAX_NODES` in `server.py` before starting the server, or stop one of the existing publishers to free a slot |
 | 2 | **Log ring is not persisted to disk** — the 200-entry in-memory log is lost when the server process restarts | Loss of historical log data across server restarts | Pipe server stdout to a log file: `python3 server.py ... >> logs/server.log 2>&1` |
-| 3 | **React frontend dev proxy is hardcoded to port 5001** | Running the Flask server on any port other than 5001 breaks the React dev proxy | When running the full dev stack, always start the Flask server with `--port 5001` |
-| 4 | **No authentication on the dashboard** | Any machine on the same network that can reach port 5000 can view the live log dashboard | Restrict access with firewall rules (`ufw`) or run the service on a private LAN segment |
-| 5 | **Demo mode does not simulate node LOST / reconnect events** | Demo mode generates steady synthetic traffic; it cannot be used to test the LOST state or re-admission behavior | Test LOST state by killing a live publisher process and observing the dashboard after the 10-second timeout |
+| 3 | **No authentication on the dashboard** | Any machine on the same network that can reach port 5000 can view the live log dashboard | Restrict access with firewall rules (`ufw`) or run the service on a private LAN segment |
+| 4 | **Demo mode does not simulate node LOST / reconnect events** | Demo mode generates steady synthetic traffic; it cannot be used to test the LOST state or re-admission behavior | Test LOST state by killing a live publisher process and observing the dashboard after the 10-second timeout |

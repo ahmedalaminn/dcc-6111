@@ -84,6 +84,6 @@ It does not replace:
 - load testing with higher publish rates
 - validating real field nodes if they differ from the Mac simulator
 
-## Optional React frontend
+## UI scope
 
-The Vite React app remains in this temp copy for laptop-only development, but it is not required for the BBB path and should not be installed on the BBB.
+This project runs with the Flask web dashboard only (`python/templates/index.html`).

@@ -4,7 +4,7 @@ import zmq
 
 DEFAULT_XPUB_BIND = "tcp://0.0.0.0:5555"
 DEFAULT_XSUB_BIND = "tcp://0.0.0.0:5556"
-DEFAULT_HWM = 200
+DEFAULT_HWM = 64
 
 
 def _configure_socket(sock: zmq.Socket, hwm: int) -> None:
