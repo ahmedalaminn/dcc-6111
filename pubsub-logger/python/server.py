@@ -61,6 +61,10 @@ _node_lock             = threading.Lock()
 _clients: list         = []
 _clients_lock          = threading.Lock()
 
+# Received-message counter
+_rx_count: int         = 0
+_rx_lock               = threading.Lock()
+
 
 def _display_host(bind_host: str) -> str:
     """Return a user-friendly host for startup logs."""
@@ -96,7 +100,11 @@ def _broadcast(event_type: str, data: dict) -> None:
 # -- Message ingestion ----------------------------------------------------------
 
 def _ingest(msg: LogMessage) -> None:
+    global _rx_count
     now = time.time()
+
+    with _rx_lock:
+        _rx_count += 1
 
     with _logging_lock:
         logging_on = _logging_enabled
@@ -125,7 +133,7 @@ def _ingest(msg: LogMessage) -> None:
 # -- Node watchdog thread -------------------------------------------------------
 
 def _node_watchdog(stop_evt: threading.Event) -> None:
-    """Periodically detects timed-out nodes and broadcasts status updates."""
+    """Periodically detects timed-out nodes and broadcasts status + stats."""
     prev_status: dict = {}  # node_id -> "ok" | "lost"
 
     while not stop_evt.is_set():
@@ -138,6 +146,10 @@ def _node_watchdog(stop_evt: threading.Event) -> None:
             if prev_status.get(node_id) != status:
                 prev_status[node_id] = status
                 _broadcast("node_status", {"node_id": node_id, "status": status})
+
+        with _rx_lock:
+            count = _rx_count
+        _broadcast("stats", {"rx_count": count})
 
         stop_evt.wait(NODE_CHECK_INTERVAL_S)
 
@@ -194,6 +206,9 @@ def stream():
     with _logging_lock:
         client_q.put_nowait(("logging_toggle", {"enabled": _logging_enabled}))
 
+    with _rx_lock:
+        client_q.put_nowait(("stats", {"rx_count": _rx_count}))
+
     now = time.time()
     with _node_lock:
         snapshot = dict(_node_last_seen)
@@ -245,11 +260,14 @@ def health():
         tracked_nodes = len(_node_last_seen)
     with _logging_lock:
         logging_enabled = _logging_enabled
+    with _rx_lock:
+        rx = _rx_count
     return jsonify(
         {
             "status": "ok",
             "tracked_nodes": tracked_nodes,
             "logging_enabled": logging_enabled,
+            "rx_count": rx,
             "transport": "sse",
         }
     )

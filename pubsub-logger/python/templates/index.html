@@ -26,20 +26,26 @@
       --shadow: 0 22px 40px rgba(0, 20, 220, 0.06);
     }
 
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
     body {
-      min-height: 100vh;
       background: var(--bg);
       color: var(--text);
       font-family: "Helvetica Neue", Arial, sans-serif;
     }
 
     .suite-shell {
-      min-height: 100vh;
+      height: 100vh;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
 
     .suite-masthead {
+      flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -81,6 +87,7 @@
     }
 
     .suite-subnav {
+      flex-shrink: 0;
       display: flex;
       align-items: center;
       gap: 10px;
@@ -99,6 +106,7 @@
     }
 
     #header {
+      flex-shrink: 0;
       display: flex;
       flex-wrap: wrap;
       align-items: center;
@@ -189,11 +197,13 @@
     }
 
     .suite-content {
-      padding: 24px 28px 28px;
-      display: grid;
-      gap: 18px;
       flex: 1;
       min-height: 0;
+      padding: 24px 28px 28px;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: 18px;
+      overflow: hidden;
     }
 
     .summary-grid {
@@ -230,6 +240,7 @@
       gap: 18px;
       grid-template-columns: 320px minmax(0, 1fr);
       min-height: 0;
+      overflow: hidden;
     }
 
     .panel {
@@ -241,6 +252,7 @@
     }
 
     .panel-header {
+      flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -280,9 +292,10 @@
     }
 
     #node-list {
+      flex: 1;
+      min-height: 0;
       padding: 14px;
       overflow-y: auto;
-      flex: 1;
       display: flex;
       flex-direction: column;
       gap: 10px;
@@ -295,12 +308,18 @@
       border: 1px solid var(--border);
       background: var(--surface);
       padding: 14px;
+      cursor: pointer;
       transition: border-color 0.15s, background 0.15s;
     }
 
     .node-row:hover {
       border-color: var(--slb-blue);
       background: var(--surface-alt);
+    }
+
+    .node-row.selected {
+      border-color: var(--slb-blue);
+      background: rgba(0, 20, 220, 0.07);
     }
 
     .node-id {
@@ -346,10 +365,9 @@
 
     #log-wrap {
       flex: 1;
+      min-height: 0;
       overflow: auto;
       background: var(--surface);
-      min-height: 0;
-      max-height: calc(100vh - 340px);
     }
 
     table {
@@ -430,10 +448,6 @@
       #body {
         grid-template-columns: 1fr;
       }
-
-      #log-wrap {
-        max-height: none;
-      }
     }
 
     @media (max-width: 768px) {
@@ -493,16 +507,16 @@
     <main class="suite-content">
       <section class="summary-grid">
         <article class="summary-card">
-          <div class="label">Tracked Node Cap</div>
-          <div class="value">5</div>
+          <div class="label">Tracked Nodes</div>
+          <div class="value" id="val-tracked-nodes">0</div>
         </article>
         <article class="summary-card">
           <div class="label">Log Buffer Cap</div>
           <div class="value">200</div>
         </article>
         <article class="summary-card">
-          <div class="label">Transport</div>
-          <div class="value">SSE</div>
+          <div class="label">Messages Received</div>
+          <div class="value" id="val-rx-count">0</div>
         </article>
       </section>
 
@@ -551,6 +565,7 @@
     const MAX_ROWS = 200;
     let loggingEnabled = true;
     const nodes = {};
+    const selectedNodes = new Set();
 
     const evtSource = new EventSource("/stream");
 
@@ -569,6 +584,11 @@
       syncToggleState();
     });
 
+    evtSource.addEventListener("stats", function(e) {
+      const d = JSON.parse(e.data);
+      document.getElementById("val-rx-count").textContent = d.rx_count;
+    });
+
     evtSource.onopen = function() {
       document.getElementById("local-dot").className = "dot ok";
       document.getElementById("local-label").textContent = "Local node OK";
@@ -582,11 +602,14 @@
     };
 
     function appendLog(d) {
+      const filtered = selectedNodes.size > 0 && !selectedNodes.has(d.node_id);
       const tbody = document.getElementById("log-body");
       const wrap = document.getElementById("log-wrap");
-      const atBottom = wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 60;
+      const atBottom = !filtered && wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight < 60;
 
       const tr = document.createElement("tr");
+      tr.dataset.node = d.node_id;
+      if (filtered) tr.style.display = "none";
       tr.innerHTML =
         '<td class="ts">' + esc(d.ts) + "</td>" +
         '<td class="node-id">' + esc(d.node_id) + "</td>" +
@@ -619,6 +642,18 @@
           '<span class="node-status ok">OK</span>';
         list.appendChild(row);
         nodes[nodeId] = row;
+        document.getElementById("val-tracked-nodes").textContent = Object.keys(nodes).length;
+
+        row.addEventListener("click", function() {
+          if (selectedNodes.has(nodeId)) {
+            selectedNodes.delete(nodeId);
+            row.classList.remove("selected");
+          } else {
+            selectedNodes.add(nodeId);
+            row.classList.add("selected");
+          }
+          applyNodeFilter();
+        });
       }
 
       const row = nodes[nodeId];
@@ -633,6 +668,13 @@
         dot.className = "dot lost";
         statusEl.className = "node-status lost";
         statusEl.textContent = "LOST";
+      }
+    }
+
+    function applyNodeFilter() {
+      const tbody = document.getElementById("log-body");
+      for (const tr of tbody.rows) {
+        tr.style.display = (selectedNodes.size === 0 || selectedNodes.has(tr.dataset.node)) ? "" : "none";
       }
     }
 
